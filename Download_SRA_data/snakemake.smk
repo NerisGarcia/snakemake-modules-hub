@@ -88,7 +88,7 @@ rule fasterq_download:
         r1_gz = f"{FASTQ_DIR}/{{acc}}_1.fastq.gz",
         r2_gz = f"{FASTQ_DIR}/{{acc}}_2.fastq.gz"
     params:
-        fastq_dir = f"{FASTQ_DIR}"
+        fastq_dir = f"{FASTQ_DIR}",
         r1 = f"{FASTQ_DIR}/{{acc}}_1.fastq",
         r2 = f"{FASTQ_DIR}/{{acc}}_2.fastq"
     conda:
