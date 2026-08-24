@@ -1,0 +1,22 @@
+# Reproducible workflow for the PTB_GWAS project with step-scoped experiments.
+configfile: "config.yaml"
+
+import re
+
+DATASET_IDS = sorted(
+    config["datasets"].keys(),
+    key=lambda dataset_id: (
+        0,
+        int(str(dataset_id).split(".", 1)[0]),
+        str(dataset_id),
+    ) if str(dataset_id).split(".", 1)[0].isdigit() else (1, str(dataset_id)),
+)
+
+#include: "code/rules/00_data_description.smk"
+#include: "code/rules/01_raw_reads_subsamp.smk"
+#include: "code/rules/02_mapping.smk"
+#include: "code/rules/03_assembly_annotation.smk"
+#include: "code/rules/04_genomes_QC.smk"
+include: "code/rules/05_dedup_dataset.smk"
+include: "code/rules/06_pangenome.smk"
+include: "code/rules/07_GWAS.smk"

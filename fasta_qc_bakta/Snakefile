@@ -1,0 +1,64 @@
+# Reproducible workflow for the PTB_GWAS project with step-scoped experiments.
+import os
+
+configfile: "code/Module1_input_fasta/config.yaml"
+
+# 1. Fetch flat configuration values 
+
+# Parse the sample names directly from the file
+
+with open(config["sample_list"]) as f:
+    SAMPLES = [line.strip() for line in f if line.strip()]
+
+
+ASSEMBLY_DIR = config["assembly_dir"]
+ANNOTATION_DIR = config["annotation_dir"]
+FASTA_EXTENSION = config["fasta_extension"]
+
+rule all:
+    input:
+        expand(f"{ANNOTATION_DIR}/{{isolate}}_bakta/{{isolate}}.gff3", isolate=SAMPLES)#,
+
+# ANNOTATION AND QC ——————————————————————————————————————————————————————————————
+
+
+rule annotation_isolate:
+    input:
+        ancient(f"{ASSEMBLY_DIR}/{{isolate}}{FASTA_EXTENSION}"), 
+    output:
+        f"{ANNOTATION_DIR}/{{isolate}}_bakta/{{isolate}}.gff3",
+    params:
+        out_dir = f"{ANNOTATION_DIR}/{{isolate}}_bakta",
+        prefix =f"{{isolate}}",
+        bakta_db = config["bakta_database"]
+    conda:
+        "baktav1.11.4"
+    threads: 4
+    shell:
+        r'''
+        mkdir -p $(dirname {output})
+        bakta --db {params.bakta_db} -o {params.out_dir} --prefix {params.prefix} --locus-tag {params.prefix} --threads {threads} {input} --keep-contig-headers --force
+        '''
+
+
+rule assembly_qc_isolate:
+    input:
+        f"{ASSEMBLY_DIR}/{{isolate}}{FASTA_EXTENSION}"
+    output:
+        f"{ASSEMBLY_DIR}/{{isolate}}_shovill/{{isolate}}.quast.transposed_report.tsv"
+    params:
+        out_dir = f"{ASSEMBLY_DIR}/{{isolate}}_quast",
+        min_contig = 200
+    threads: 16
+    conda:
+        "quast_env"
+    shell:
+        r'''
+        mkdir -p $(dirname {output})
+        quast.py {input} -o {params.out_dir} --threads {threads} --glimmer --no-sv --no-icarus --no-plots --min-contig {params.min_contig}
+
+        mv {params.out_dir}/transposed_report.tsv {output}
+        rm -rf {params.out_dir}
+        '''
+
+

@@ -1,0 +1,16 @@
+# Main config for PTB_GWAS project
+# INPUT ————————————————————————————————————————————————————————————————
+sample_list: "data/Lcrispatus.MAGS_v5.MAG_ID.csv"
+
+# OUT ————————————————————————————————————————————————————————————————
+
+assembly_dir: "resources/ZB_LC_MAGs"
+annotation_dir: "data/2_Assembly/3_Annotation"
+fasta_extension: ".fasta"
+
+# PARAMS ———————————————————————————————————————————————————————————————
+bakta_database: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/bakta/27apr2026/db-light"
+  #version: 6.0
+  #Type: light
+  #DOI: 10.5281/zenodo.14916843
+

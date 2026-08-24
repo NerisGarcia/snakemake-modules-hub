@@ -1,0 +1,4 @@
+
+taxon: "Lactobacillus"
+
+dataset_out_dir: data/0_input_data/0_SRA_genomes

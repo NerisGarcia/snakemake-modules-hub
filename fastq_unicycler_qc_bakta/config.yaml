@@ -1,0 +1,89 @@
+# Main config for PTB_GWAS project
+manifest_parsed : "data/ZB_Lcrispatus_manifest_parsed.csv"
+
+
+dataset:
+  "v4":
+    sample_list: "data/Lcrispatus.v4.CultureID.txt"
+
+  #"dedup":
+  #  samples: "data/Lcrispatus417.CultureID.txt"
+  #  n: 417
+
+  #"388":
+  #  samples: "data/Lcrispatus388.CultureID.txt"
+  #  n: 388
+
+  #"146":
+  #  samples: "data/Lcrispatus146.CultureID.txt"
+  #  n: 146
+
+
+
+Reference_genome : REFC0403A1
+
+Ref_genome: 
+    assembly: "data/2_assembly/2_Spades/Lcrispatus_417/Lcrispatus_417.contigs.fasta"
+    annotation: "data/1_Assembly/3_Annotation/Lcrispatus_417/Lcrispatus_417.bakta.gff"
+
+manifest_path: "resources/ZB_Lcrispatus_manifest_260413.csv"
+
+inputs:
+  manifest_names_list: "resources/ZB_Lcrispatus_manifest_260413.names.list.csv"
+  base_mapping_stats: "data/2_mapping/2_snippy_cores/Lcrispatus_417/Lcrispatus_417.txt"
+  species_summary: "data/0_raw_reads_QC/3_Kraken2/Lcrispatus402.Kraken.all.summary"
+  quast_summary: "data/1_Assembly/2_QC/1_Quast/quast_summary.tsv"
+  mash_distances_fallback: "data/1_Assembly/4_mashtree/Lcrispatus_417.mash_distances.tsv"
+  gwas_phenotypes: "data/Lcrispatus.417.phenotypes.txt"
+
+bakta:
+  database: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/bakta/27apr2026/db-light"
+  #version: 6.0
+  #Type: light
+  #DOI: 10.5281/zenodo.14916843
+
+panaroo:
+  clean_mode: strict
+  core_threshold: 0.98
+  alignment: pan
+  family_threshold: 0.8
+  refind_mode: strict
+  aligner: mafft
+
+pangenome:
+  core_threshold_values: [90, 95, 98]
+
+
+dedup:
+  mash_distance: 0.002
+
+gwas:
+  phenotypes: delivery_week
+  input_types: unitigs
+  mash_distance: 0.002
+  reference:
+    name: REFC0403A1
+    fna: resources/LC_PacBio_Genomes/C0403A1_wPlasmid/REF_C0403A1.fna
+    gff: resources/LC_PacBio_Genomes/C0403A1_wPlasmid/REF_C0403A1.gff3
+
+all_targets:
+  core: 95
+  phenotype: delivery
+  input_type: unitigs
+
+tree:
+  model: GTR
+
+resources:
+  gral_params:
+    threads: 8
+    mem_mb: 16000
+  panaroo:
+    threads: 4
+    mem_mb: 64000
+  gwas:
+    unitig_threads: 12
+    pyseer_threads: 8
+
+databases:
+  eggnog:
