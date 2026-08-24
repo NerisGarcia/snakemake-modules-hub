@@ -1,4 +1,3 @@
-configfile: "code/Module1_download_SRA_data/config.yml"
 
 TAXON = config.get("taxon")
 DATASET_DIR = config.get("dataset_out_dir")
