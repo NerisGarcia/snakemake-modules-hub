@@ -99,7 +99,8 @@ checkpoint prefetch_sra:
     output:
         PREFETCHED_ACCESSIONS_FILE
     params:
-        fastq_dir = f"{FASTQ_DIR}"
+        fastq_dir = f"{FASTQ_DIR}",
+        DONEFILE = DONEFILE
     conda:
         "ncbi_download"
     shell:
@@ -108,10 +109,10 @@ checkpoint prefetch_sra:
         : > {output[0]}
         while IFS= read -r acc; do
             [ -z "$acc" ] && continue
-            if prefetch --output-directory {params.fastq_dir} "$acc" >> {DONEFILE} 2>&1; then
+            if prefetch --output-directory {params.fastq_dir} "$acc" >> {params.DONEFILE} 2>&1; then
                 echo "$acc" >> {output[0]}
             else
-                echo "skip $acc" >> {DONEFILE}
+                echo "skip $acc" >> {params.DONEFILE}
             fi
         done < {input[0]}
         """
