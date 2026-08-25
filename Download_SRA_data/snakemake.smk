@@ -7,10 +7,14 @@ OUT_PREFIX = f"{DATASET_DIR}/{TAXON}_sra_runexperiments"
 METADATA_FILE = f"{OUT_PREFIX}.metadata.tsv"
 METADATA_FILTERED_FILE = f"{OUT_PREFIX}_filtered.metadata.tsv"
 METADATA_ACCESSIONS_FILE = f"{OUT_PREFIX}_accessions.txt"
+PREFETCHED_ACCESSIONS_FILE = f"{OUT_PREFIX}_prefetched_accessions.txt"
 FASTQ_DIR = f"{DATASET_DIR}/SRA_fastq"
+
 
 DONEFILE = f"{DATASET_DIR}/download.log"
 
+
+NREAD= config.get("n_reads")
 
 def get_accessions(_wildcards):
     accessions_file = checkpoints.extract_sra_accessions.get().output[0]
@@ -18,8 +22,14 @@ def get_accessions(_wildcards):
         return [line.strip() for line in handle if line.strip()]
 
 
+def get_prefetched_accessions(_wildcards):
+    accessions_file = checkpoints.prefetch_sra.get().output[0]
+    with open(accessions_file) as handle:
+        return [line.strip() for line in handle if line.strip()]
+
+
 def get_fastq_targets(wildcards):
-    accessions = get_accessions(wildcards)
+    accessions = get_prefetched_accessions(wildcards)
     return expand(f"{FASTQ_DIR}/{{acc}}_{{read}}.fastq.gz", acc=accessions, read=["1", "2"])
 
 
@@ -83,21 +93,40 @@ checkpoint extract_sra_accessions:
         """
 
 
-rule fasterq_download:
+checkpoint prefetch_sra:
+    input:
+        METADATA_ACCESSIONS_FILE
     output:
-        r1_gz = f"{FASTQ_DIR}/{{acc}}_1.fastq.gz",
-        r2_gz = f"{FASTQ_DIR}/{{acc}}_2.fastq.gz"
+        PREFETCHED_ACCESSIONS_FILE
     params:
-        fastq_dir = f"{FASTQ_DIR}",
-        r1 = f"{FASTQ_DIR}/{{acc}}_1.fastq",
-        r2 = f"{FASTQ_DIR}/{{acc}}_2.fastq"
+        fastq_dir = f"{FASTQ_DIR}"
     conda:
         "ncbi_download"
     shell:
         """
-        mkdir -p {params.fastq_dir}
-        fasterq-dump --split-files --outdir {params.fastq_dir} "{wildcards.acc}"
-        gzip {params.r1} 
-        gzip {params.r2}
+        mkdir -p {FASTQ_DIR}
+        : > {output}
+        while IFS= read -r acc; do
+            [ -z "$acc" ] && continue
+            if prefetch --output-directory {params.fastq_dir} "$acc" >> {DONEFILE} 2>&1; then
+                echo "$acc" >> {output}
+            else
+                echo "skip $acc" >> {DONEFILE}
+            fi
+        done < {input[0]}
+        """
+
+rule fastq_dump:
+    output:
+        r1_gz = f"{FASTQ_DIR}/{{acc}}_1.fastq.gz",
+        r2_gz = f"{FASTQ_DIR}/{{acc}}_2.fastq.gz"
+    params:
+        fastq_dir = f"{FASTQ_DIR}",      
+        nread = NREAD
+    conda:
+        "ncbi_download"
+    shell:
+        """
+        fastq-dump --split-3 -X {params.nread} --outdir {params.fastq_dir} "{wildcards.acc}" --gzip
         """
 

@@ -2,3 +2,6 @@
 taxon: "Lactobacillus iners"
 
 dataset_out_dir: data/test
+
+# number of reads for each SRA accession to download. 
+n_reads: 3000000
