@@ -52,13 +52,7 @@ rule assembly_qc_isolate:
         rm -rf data/1_Assembly/2_QC/1_Quast/{wildcards.isolate}_quast
         '''
 
-rule assembly_qc:
-    input:
-        expand("data/1_Assembly/2_QC/1_Quast/{isolate}.quast.transposed_report.tsv", isolate=ALL_ISOLATES)
 
 
-rule assembly_annotation_qc:
-    input:
-        rules.assembly.input,
-        rules.annotation.input,
-        rules.assembly_qc.input
+
+
