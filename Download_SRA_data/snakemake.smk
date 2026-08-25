@@ -7,7 +7,7 @@ OUT_PREFIX = f"{DATASET_DIR}/{TAXON}_sra_runexperiments"
 METADATA_FILE = f"{OUT_PREFIX}.metadata.tsv"
 METADATA_FILTERED_FILE = f"{OUT_PREFIX}_filtered.metadata.tsv"
 METADATA_ACCESSIONS_FILE = f"{OUT_PREFIX}_accessions.txt"
-FASTQ_DIR = f"{DATASET_DIR}/{OUT_PREFIX}_fastq"
+FASTQ_DIR = f"{DATASET_DIR}/SRA_fastq"
 
 DONEFILE = f"{DATASET_DIR}/download.log"
 
