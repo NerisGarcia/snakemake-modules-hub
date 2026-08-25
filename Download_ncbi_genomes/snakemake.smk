@@ -28,12 +28,13 @@ rule download_lactobacillus_summary:
 	output:
 		SUMMARYFILE
 	params:
-		taxon=TAXON
+		taxon=TAXON,
+		dir=DATASET_DIR
 	conda:
 		"ncbi_download"
 	shell:
 		"""
-		mkdir -p {DATASET_DIR}
+		mkdir -p {params.dir}
 		datasets summary genome taxon {params.taxon} --mag exclude --as-json-lines | dataformat tsv genome > {output}
 
 		"""
@@ -47,7 +48,7 @@ rule download_lactobacillus_genomes_dehydrated:
 		"ncbi_download"
 	shell:
 		"""
-		mkdir -p {DATASET_DIR}
+		mkdir -p {params.dir}
 		datasets download genome taxon "{params.taxon}" --mag exclude --dehydrated --filename {output}
 		"""
 
@@ -72,12 +73,15 @@ rule rehydrate_lactobacillus_dataset:
 		f"{DATASET_DIR}/{DATASET_NAME}"		
 	output:
 		DONEFILE
+	params:
+		taxon=TAXON,
+		date=DATE
 	conda:
 		"ncbi_download"
 	shell:
 		"""
 		datasets rehydrate --directory {input}
-		echo "Downloaded {TAXON} genomes and metadata on {DATE}" > {output}
+		echo "Downloaded {params.taxon} genomes and metadata on {params.date}" > {output}
 		"""
 
 rule fix_folders:
