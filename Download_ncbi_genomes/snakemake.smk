@@ -43,7 +43,8 @@ rule download_lactobacillus_genomes_dehydrated:
 	output:
 		ZIPFILE
 	params:
-		taxon=TAXON
+		taxon=TAXON,
+		dir=DATASET_DIR
 	conda:
 		"ncbi_download"
 	shell:
