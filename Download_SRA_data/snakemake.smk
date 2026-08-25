@@ -104,12 +104,12 @@ checkpoint prefetch_sra:
         "ncbi_download"
     shell:
         """
-        mkdir -p {FASTQ_DIR}
-        : > {output}
+        mkdir -p {params.fastq_dir}
+        : > {output[0]}
         while IFS= read -r acc; do
             [ -z "$acc" ] && continue
             if prefetch --output-directory {params.fastq_dir} "$acc" >> {DONEFILE} 2>&1; then
-                echo "$acc" >> {output}
+                echo "$acc" >> {output[0]}
             else
                 echo "skip $acc" >> {DONEFILE}
             fi
