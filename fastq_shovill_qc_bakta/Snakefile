@@ -1,0 +1,126 @@
+with open(config["sra_acc_list"]) as handle:
+    SAMPLES = [
+        line.strip()
+        for line in handle
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+
+if not SAMPLES:
+    raise ValueError("The SRA accession list is empty")
+
+RAW_DIR = config["sra_raw"]
+CLEAN_DIR = config["clean_dir"]
+RESULTS_DIR = config["genomics_results_dir"]
+ASS_DIR = f"{RESULTS_DIR}/01_assembly"
+ANN_DIR = f"{RESULTS_DIR}/02_annotation"
+QC_DIR = f"{RESULTS_DIR}/03_qc"
+BAKTA_DB_DIR = config["bakta_db"]
+
+BUSCO_OUTPUT =  f"{QC_DIR}/BUSCO"
+BUSCO_LINEAGE = config["busco_lineage"]
+CHECKM2_OUTPUT = f"{QC_DIR}/checkm2"
+CHECKM2_DB_DIR = config["checkm2_db"]
+
+rule all:
+    input:
+        expand(f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.gff3", sample=SAMPLES),
+        expand(f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna", sample=SAMPLES),
+        expand(f"{ASS_DIR}/{{sample}}_shovill/{{sample}}.contigs.fa", sample=SAMPLES),
+        expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt", sample=SAMPLES),
+        expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv", sample=SAMPLES),
+        expand(f"{CHECKM2_OUTPUT}/{{sample}}.log", sample=SAMPLES),
+
+
+rule fastp:
+    input:
+        r1=f"{RAW_DIR}/{{sample}}_1.fastq.gz",
+        r2=f"{RAW_DIR}/{{sample}}_2.fastq.gz"
+    output:
+        r1=f"{CLEAN_DIR}/{{sample}}_1.clean.fastq.gz",
+        r2=f"{CLEAN_DIR}/{{sample}}_2.clean.fastq.gz",
+        json=f"{CLEAN_DIR}/{{sample}}.fastp.json",
+        html=f"{CLEAN_DIR}/{{sample}}.fastp.html"
+    threads: config["threads"]["fastp"]
+    conda:
+        "genomics_env"
+    shell:
+        """
+        mkdir -p {CLEAN_DIR}
+        fastp --in1 {input.r1} --in2 {input.r2} \
+            --out1 {output.r1} --out2 {output.r2} \
+            --json {output.json} --html {output.html} \
+            --thread {threads} --dedup --trim_tail1 3 --trim_tail2 3 \
+            --length_required 120 -q 30 -u 80 \
+            --trim_front1 2 --trim_front2 2
+        """
+
+
+rule shovill:
+    input:
+        r1=f"{CLEAN_DIR}/{{sample}}_1.clean.fastq.gz",
+        r2=f"{CLEAN_DIR}/{{sample}}_2.clean.fastq.gz"
+    output:
+        contigs=f"{ASS_DIR}/{{sample}}_shovill/{{sample}}.contigs.fa"
+    params:
+        out_dir=f"{ASS_DIR}/{{sample}}_shovill"
+    threads: config["threads"]["shovill"]
+    conda:
+        "genomics_env"
+    shell:
+        """
+        mkdir -p {params.out_dir}
+        shovill --R1 {input.r1} --R2 {input.r2} \
+            --outdir {params.out_dir} --cpus {threads} --force
+        
+        mv {params.out_dir}/contigs.fa {output.contigs}
+
+        """
+
+rule bakta:
+    input:
+        contigs=f"{ASS_DIR}/{{sample}}_shovill/{{sample}}.contigs.fa"
+    output:
+        gff3=f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.gff3",
+        fna=f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna"
+    params:
+        out_dir=f"{ANN_DIR}/{{sample}}_bakta",
+        prefix="{sample}",
+        bakta_db=BAKTA_DB_DIR
+    threads: config["threads"]["bakta"]
+    conda:
+        "genomics_env"
+    shell:
+        """
+        mkdir -p {params.out_dir}
+        bakta --db {params.bakta_db} --output {params.out_dir} \
+            --prefix {params.prefix} --locus-tag {params.prefix} \
+            --threads {threads} {input.contigs} --keep-contig-headers --force
+        """
+
+
+rule busco:
+    input:
+        f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna"
+    output:
+        out2 =  f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt",
+        out4 =  f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv"
+    params:
+        out_dir = f"{BUSCO_OUTPUT}",
+        out1 =  f"{BUSCO_OUTPUT}/{{sample}}/short_summary.specific.{BUSCO_LINEAGE}.{{sample}}.txt",
+        out2 =  f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt",
+        
+        out3 =  f"{BUSCO_OUTPUT}/{{sample}}/run_{BUSCO_LINEAGE}/full_table.tsv",
+        out4 =  f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv",
+
+        sample = f"{{sample}}",
+        lineage = BUSCO_LINEAGE
+
+    threads: 8
+    conda:
+        "genomics_env"
+    shell:
+        """
+        busco -i {input} -o {params.sample} -l {params.lineage} -m genome --out_path {params.out_dir} --force --cpu {threads} 
+        mv  {params.out1} {params.out2}
+        mv {params.out3} {params.out4}
+        """

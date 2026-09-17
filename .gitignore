@@ -1,2 +1,4 @@
 /data
 /.snakemake
+/busco_downloads
+

@@ -1,0 +1,19 @@
+
+# One SRA accession per line.
+sra_acc_list: "data/test/Winogradskyella_thalassocola_sra_runexperiments_accessions.txt"
+
+# FASTQ files must be named {accession}_1.fastq.gz and {accession}_2.fastq.gz.
+sra_raw: "data/test/SRA_fastq"
+clean_dir: "data/clean"
+genomics_results_dir: "data/results"
+
+bakta_db: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/bakta/27apr2026/db-light"
+
+busco_lineage: "lactobacillales_odb10"
+
+checkm2_db: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/checkm2/CheckM2_database/uniref100.KO.1.dmnd"
+
+threads:
+  fastp: 16
+  shovill: 16
+  bakta: 4

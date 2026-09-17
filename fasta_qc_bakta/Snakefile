@@ -30,33 +30,11 @@ rule annotation_isolate:
         prefix =f"{{isolate}}",
         bakta_db = config["bakta_database"]
     conda:
-        "baktav1.11.4"
+        "genomics_env"
     threads: 4
     shell:
         r'''
         mkdir -p $(dirname {output})
         bakta --db {params.bakta_db} -o {params.out_dir} --prefix {params.prefix} --locus-tag {params.prefix} --threads {threads} {input} --keep-contig-headers --force
         '''
-
-
-rule assembly_qc_isolate:
-    input:
-        f"{ASSEMBLY_DIR}/{{isolate}}{FASTA_EXTENSION}"
-    output:
-        f"{ASSEMBLY_DIR}/{{isolate}}_shovill/{{isolate}}.quast.transposed_report.tsv"
-    params:
-        out_dir = f"{ASSEMBLY_DIR}/{{isolate}}_quast",
-        min_contig = 200
-    threads: 16
-    conda:
-        "quast_env"
-    shell:
-        r'''
-        mkdir -p $(dirname {output})
-        quast.py {input} -o {params.out_dir} --threads {threads} --glimmer --no-sv --no-icarus --no-plots --min-contig {params.min_contig}
-
-        mv {params.out_dir}/transposed_report.tsv {output}
-        rm -rf {params.out_dir}
-        '''
-
 

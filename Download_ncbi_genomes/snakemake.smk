@@ -24,7 +24,7 @@ rule all:
 		directory(GENOMES_DIR)
 
 
-rule download_lactobacillus_summary:
+rule download_summary:
 	output:
 		SUMMARYFILE
 	params:
@@ -39,7 +39,7 @@ rule download_lactobacillus_summary:
 
 		"""
 
-rule download_lactobacillus_genomes_dehydrated:
+rule download_genomes_dehydrated:
 	output:
 		ZIPFILE
 	params:
@@ -54,7 +54,7 @@ rule download_lactobacillus_genomes_dehydrated:
 		"""
 
 
-rule unzip_lactobacillus_dataset:
+rule unzip_dataset:
 	input:
 		ZIPFILE
 	output:
@@ -69,7 +69,7 @@ rule unzip_lactobacillus_dataset:
 
 		"""
 
-rule rehydrate_lactobacillus_dataset:
+rule rehydrate_dataset:
 	input:
 		f"{DATASET_DIR}/{DATASET_NAME}"		
 	output:
