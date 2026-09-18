@@ -1,16 +1,18 @@
-# Main config for PTB_GWAS project
-# INPUT ————————————————————————————————————————————————————————————————
-sample_list: "data/Lcrispatus.MAGS_v5.MAG_ID.csv"
 
-# OUT ————————————————————————————————————————————————————————————————
+# One SRA accession per line.
+genome_acc_list: "data/test/Winogradskyella_thalassocola_sra_runexperiments_accessions.txt"
 
-assembly_dir: "resources/ZB_LC_MAGs"
-annotation_dir: "data/2_Assembly/3_Annotation"
-fasta_extension: ".fasta"
+# FASTQ files must be named {accession}_1.fastq.gz and {accession}_2.fastq.gz.
+ass_dir: "/Volumes/Scratch/neris/02_lacto_genomics/data/0_input_data/0_ncbi_genomes/genomes"
+genomics_results_dir: "data/results"
 
-# PARAMS ———————————————————————————————————————————————————————————————
-bakta_database: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/bakta/27apr2026/db-light"
-  #version: 6.0
-  #Type: light
-  #DOI: 10.5281/zenodo.14916843
+bakta_db: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/bakta/27apr2026/db-light"
 
+busco_lineage: "lactobacillales_odb10"
+
+checkm2_db: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/checkm2/CheckM2_database/uniref100.KO.1.dmnd"
+
+threads:
+  fastp: 16
+  shovill: 16
+  bakta: 4

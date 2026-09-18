@@ -1,40 +1,75 @@
-# Reproducible workflow for the PTB_GWAS project with step-scoped experiments.
-import os
+with open(config["genome_acc_list"]) as handle:
+    SAMPLES = [
+        line.strip()
+        for line in handle
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
 
+if not SAMPLES:
+    raise ValueError("The genome accession list is empty")
 
-# 1. Fetch flat configuration values 
+ASS_DIR = config["ass_dir"]
+RESULTS_DIR = config["genomics_results_dir"]
+ANN_DIR = f"{RESULTS_DIR}/02_annotation"
+QC_DIR = f"{RESULTS_DIR}/03_qc"
+BAKTA_DB_DIR = config["bakta_db"]
 
-# Parse the sample names directly from the file
+BUSCO_OUTPUT =  f"{QC_DIR}/BUSCO"
+BUSCO_LINEAGE = config["busco_lineage"]
 
-with open(config["sample_list"]) as f:
-    SAMPLES = [line.strip() for line in f if line.strip()]
-
-ASSEMBLY_DIR = config["assembly_dir"]
-ANNOTATION_DIR = config["annotation_dir"]
-FASTA_EXTENSION = config["fasta_extension"]
 
 rule all:
     input:
-        expand(f"{ANNOTATION_DIR}/{{isolate}}_bakta/{{isolate}}.gff3", isolate=SAMPLES)#,
+        expand(f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.gff3", sample=SAMPLES),
+        expand(f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna", sample=SAMPLES),
+        expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt", sample=SAMPLES),
+        expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv", sample=SAMPLES)
 
-# ANNOTATION AND QC ——————————————————————————————————————————————————————————————
-
-
-rule annotation_isolate:
+rule bakta:
     input:
-        ancient(f"{ASSEMBLY_DIR}/{{isolate}}{FASTA_EXTENSION}"), 
+        contigs=f"{ASS_DIR}/{{sample}}.fna"
     output:
-        f"{ANNOTATION_DIR}/{{isolate}}_bakta/{{isolate}}.gff3",
+        gff3=f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.gff3",
+        fna=f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna"
     params:
-        out_dir = f"{ANNOTATION_DIR}/{{isolate}}_bakta",
-        prefix =f"{{isolate}}",
-        bakta_db = config["bakta_database"]
+        out_dir=f"{ANN_DIR}/{{sample}}_bakta",
+        prefix="{sample}",
+        bakta_db=BAKTA_DB_DIR
+    threads: config["threads"]["bakta"]
     conda:
         "genomics_env"
-    threads: 4
     shell:
-        r'''
-        mkdir -p $(dirname {output})
-        bakta --db {params.bakta_db} -o {params.out_dir} --prefix {params.prefix} --locus-tag {params.prefix} --threads {threads} {input} --keep-contig-headers --force
-        '''
+        """
+        mkdir -p {params.out_dir}
+        bakta --db {params.bakta_db} --output {params.out_dir} \
+            --prefix {params.prefix} --locus-tag {params.prefix} \
+            --threads {threads} {input.contigs} --keep-contig-headers --force
+        """
 
+
+rule busco:
+    input:
+        f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna"
+    output:
+        out2 =  f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt",
+        out4 =  f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv"
+    params:
+        out_dir = f"{BUSCO_OUTPUT}",
+        out1 =  f"{BUSCO_OUTPUT}/{{sample}}/short_summary.specific.{BUSCO_LINEAGE}.{{sample}}.txt",
+        out2 =  f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt",
+        
+        out3 =  f"{BUSCO_OUTPUT}/{{sample}}/run_{BUSCO_LINEAGE}/full_table.tsv",
+        out4 =  f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv",
+
+        sample = f"{{sample}}",
+        lineage = BUSCO_LINEAGE
+
+    threads: 8
+    conda:
+        "genomics_env"
+    shell:
+        """
+        busco -i {input} -o {params.sample} -l {params.lineage} -m genome --out_path {params.out_dir} --force --cpu {threads} 
+        mv  {params.out1} {params.out2}
+        mv {params.out3} {params.out4}
+        """
