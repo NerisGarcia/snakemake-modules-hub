@@ -7,7 +7,7 @@ conda create -n genomics_env
 
 conda activate genomics_env
 
-conda install -c bioconda fastp shovill==1.1.0 bakta busco 
+conda create -n genomics_env -c bioconda fastp shovill==1.1.0 bakta busco 
 
 conda activate genomics_env
 
