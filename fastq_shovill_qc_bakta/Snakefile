@@ -26,9 +26,7 @@ rule all:
         expand(f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna", sample=SAMPLES),
         expand(f"{ASS_DIR}/{{sample}}_shovill/{{sample}}.contigs.fa", sample=SAMPLES),
         expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt", sample=SAMPLES),
-        expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv", sample=SAMPLES),
-        expand(f"{CHECKM2_OUTPUT}/{{sample}}.log", sample=SAMPLES),
-
+        expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv", sample=SAMPLES)
 
 rule fastp:
     input:
