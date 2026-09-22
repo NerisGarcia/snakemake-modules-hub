@@ -1,0 +1,7 @@
+
+accessions_file: data/test/1580_sra_runexperiments_accessions.txt
+
+dataset_out_dir: data/test
+
+# number of reads for each SRA accession to download.
+n_reads: 3000000

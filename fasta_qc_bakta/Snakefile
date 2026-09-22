@@ -16,6 +16,7 @@ BAKTA_DB_DIR = config["bakta_db"]
 
 BUSCO_OUTPUT =  f"{QC_DIR}/BUSCO"
 BUSCO_LINEAGE = config["busco_lineage"]
+QUAST_OUTPUT = f"{QC_DIR}/QUAST"
 
 
 rule all:
@@ -23,7 +24,8 @@ rule all:
         expand(f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.gff3", sample=SAMPLES),
         expand(f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna", sample=SAMPLES),
         expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt", sample=SAMPLES),
-        expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv", sample=SAMPLES)
+        expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv", sample=SAMPLES),
+        expand(f"{QUAST_OUTPUT}/{{sample}}.quast.transposed_report.tsv", sample=SAMPLES)
 
 rule bakta:
     input:
@@ -73,3 +75,22 @@ rule busco:
         mv  {params.out1} {params.out2}
         mv {params.out3} {params.out4}
         """
+
+
+rule assembly_qc_sample:
+    input:
+        f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna"
+    output:
+        f"{QUAST_OUTPUT}/{{sample}}.quast.transposed_report.tsv"
+    conda:
+        "quast_full_env"
+    params:
+        out_dir = f"{QUAST_OUTPUT}/{{sample}}_quast"
+    threads: 16
+    shell:
+        r'''
+        quast.py {input} -o {params.out_dir} --threads {threads} --glimmer --no-sv --no-icarus --no-plots --min-contig 200
+
+        mv {params.out_dir}/transposed_report.tsv {output}
+        rm -rf {params.out_dir}
+        '''
