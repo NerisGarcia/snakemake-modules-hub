@@ -1,6 +1,7 @@
 
 snakemake \
+-n \
     --use-conda \
     --cores 8 \
-    --snakefile pangenome_tree/Snakefile \
-    --configfile pangenome_tree/config.yaml 
+    --snakefile panaroo_tree/Snakefile \
+    --configfile panaroo_tree/config.yaml 

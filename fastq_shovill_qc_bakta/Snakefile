@@ -38,8 +38,8 @@ rule all:
 
 rule summary_table:
     input:
-        expand(f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.gff3", sample=SAMPLES),
-        expand(f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna", sample=SAMPLES),
+        expand(f"{ANN_DIR}/{{sample}}.gff3", sample=SAMPLES),
+        expand(f"{ANN_DIR}/{{sample}}.fna", sample=SAMPLES),
         expand(f"{ASS_DIR}/{{sample}}_shovill/{{sample}}.contigs.fa", sample=SAMPLES),
         expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt", sample=SAMPLES),
         expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv", sample=SAMPLES),
@@ -118,9 +118,32 @@ rule bakta:
         """
 
 
+rule bakta_cleanup:
+    input:
+        gff3=f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.gff3",
+        fna=f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna"
+    output:
+        gff3=f"{ANN_DIR}/{{sample}}.gff3",
+        fna=f"{ANN_DIR}/{{sample}}.fna"
+    params:
+        out_dir=f"{ANN_DIR}/{{sample}}_bakta",
+        prefix="{sample}"
+    shell:
+        """
+        ln -sfn {params.out_dir}/{params.prefix}.gff3 {output.gff3}
+        ln -sfn {params.out_dir}/{params.prefix}.fna {output.fna}
+
+        rm -f {params.out_dir}/{params.prefix}.embl \
+              {params.out_dir}/{params.prefix}.png \
+              {params.out_dir}/{params.prefix}.svg \
+              {params.out_dir}/{params.prefix}.hypotheticals.faa \
+              {params.out_dir}/{params.prefix}.hypotheticals.tsv
+        """
+
+
 rule busco:
     input:
-        f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna"
+        f"{ANN_DIR}/{{sample}}.fna"
     output:
         out2 =  f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt",
         out4 =  f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv"
@@ -148,7 +171,7 @@ rule busco:
 
 rule assembly_qc_sample:
     input:
-        f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna"
+        f"{ANN_DIR}/{{sample}}.fna"
     output:
         f"{QUAST_OUTPUT}/{{sample}}.quast.transposed_report.tsv"
     conda:
