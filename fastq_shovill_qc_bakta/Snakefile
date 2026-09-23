@@ -180,3 +180,9 @@ def write_summary_table():
                 row.append("OK" if os.path.exists(path) and os.path.getsize(path) > 0 else "FAIL")
             out.write("\t".join(row) + "\n")
 
+onsuccess:
+    write_summary_table()
+
+onerror:
+    write_summary_table()
+

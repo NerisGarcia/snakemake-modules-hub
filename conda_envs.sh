@@ -25,3 +25,15 @@ conda activate checkm2_env
 
  conda deactivate
  conda remove -n checkm2_env --all
+
+
+
+
+rsync -avhP \
+  --include='*/' \
+  --include='*.gff3' \
+  --include='*.faa' \
+  --include='*.fna' \
+  --exclude='*' \
+  /Users/ngarcia-gonzalez/Desktop/RESEARCH/Projects/01_PTB_GWAS/data/0_input_data/3_Annotation/ \
+  ngarcia-gonzalez@ravellab.igs.umaryland.edu:/local/scratch/neris/01_PTB_GWAS/data/3_Annotation/
