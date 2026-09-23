@@ -15,15 +15,18 @@ if not SAMPLES:
 ANNOT_DIR = config["annot_dir"]
 RESULTS_DIR = config["genomics_results_dir"]
 CORE_DIR = f"{RESULTS_DIR}/04_pangenome"
+CORE_THRESHOLD = config["panaroo"]["core_threshold"]
+PANAROO_DIR = f"{CORE_DIR}/core_{CORE_THRESHOLD}"
+CORE_PREFIX = f"core{CORE_THRESHOLD}"
 
 GFF_PATHS = f"{CORE_DIR}/gff_paths.txt"
-IQTREE_PREFIX = f"{CORE_DIR}/iqtree/core_gene_alignment_filtered"
+IQTREE_PREFIX = f"{PANAROO_DIR}/iqtree/{CORE_PREFIX}_gene_alignment_filtered"
 
 
 rule all:
     input:
-        f"{CORE_DIR}/gene_presence_absence.Rtab",
-        f"{CORE_DIR}/gene_presence_absence_roary.csv",
+        f"{PANAROO_DIR}/gene_presence_absence.Rtab",
+        f"{PANAROO_DIR}/gene_presence_absence_roary.csv",
         f"{IQTREE_PREFIX}.treefile"
 
 
@@ -54,23 +57,23 @@ rule pangenome_gff_paths:
         printf '%s\n' {input.edited_gffs} > {output}
         '''
 
-rule pangenome_panaroo_with_ref_for_gwas:
+rule pangenome_panaroo:
     input:
         gff_paths=GFF_PATHS
     output:
-        gene_presence_absence = f"{CORE_DIR}/gene_presence_absence.Rtab",
-        core_alignment      = f"{CORE_DIR}/core_gene_alignment.aln",
-        core_aln_filtered   = f"{CORE_DIR}/core_gene_alignment_filtered.aln",
-        core_aln_filtered_head= f"{CORE_DIR}/core_alignment_filtered_header.embl",
-        core_aln_head     = f"{CORE_DIR}/core_alignment_header.embl",
-        pangenome = f"{CORE_DIR}/gene_presence_absence_roary.csv",
+        gene_presence_absence = f"{PANAROO_DIR}/gene_presence_absence.Rtab",
+        core_alignment      = f"{PANAROO_DIR}/core_gene_alignment.aln",
+        core_aln_filtered   = f"{PANAROO_DIR}/core_gene_alignment_filtered.aln",
+        core_aln_filtered_head= f"{PANAROO_DIR}/core_alignment_filtered_header.embl",
+        core_aln_head     = f"{PANAROO_DIR}/core_alignment_header.embl",
+        pangenome = f"{PANAROO_DIR}/gene_presence_absence_roary.csv",
 
     params:
-        out_dir = CORE_DIR,
+        out_dir = PANAROO_DIR,
         clean_mode=config["panaroo"]["clean_mode"],
         alignment=config["panaroo"]["alignment"],
         family_threshold=config["panaroo"]["family_threshold"],
-        core_threshold=config["panaroo"]["core_threshold"],
+        core_threshold=CORE_THRESHOLD,
         refind_mode=config["panaroo"]["refind_mode"],
         aligner=config["panaroo"]["aligner"],
     threads: config["threads"]
@@ -95,16 +98,36 @@ rule pangenome_panaroo_with_ref_for_gwas:
  
        '''
 
+
+rule rename_core_files:
+    input:
+        core_alignment=f"{PANAROO_DIR}/core_gene_alignment.aln",
+        core_aln_filtered=f"{PANAROO_DIR}/core_gene_alignment_filtered.aln",
+        core_aln_filtered_head=f"{PANAROO_DIR}/core_alignment_filtered_header.embl",
+        core_aln_head=f"{PANAROO_DIR}/core_alignment_header.embl"
+    output:
+        core_alignment=f"{PANAROO_DIR}/{CORE_PREFIX}_gene_alignment.aln",
+        core_aln_filtered=f"{PANAROO_DIR}/{CORE_PREFIX}_gene_alignment_filtered.aln",
+        core_aln_filtered_head=f"{PANAROO_DIR}/{CORE_PREFIX}_alignment_filtered_header.embl",
+        core_aln_head=f"{PANAROO_DIR}/{CORE_PREFIX}_alignment_header.embl"
+    shell:
+        r'''
+        mv {input.core_alignment} {output.core_alignment}
+        mv {input.core_aln_filtered} {output.core_aln_filtered}
+        mv {input.core_aln_filtered_head} {output.core_aln_filtered_head}
+        mv {input.core_aln_head} {output.core_aln_head}
+        '''
+
 rule prepare_tree_filtered:
     input:
-        core_aln_filtered  = f"{CORE_DIR}/core_gene_alignment_filtered.aln",    
+        core_aln_filtered  = f"{PANAROO_DIR}/{CORE_PREFIX}_gene_alignment_filtered.aln",    
     output:
-        vcf = f"{CORE_DIR}/core_gene_alignment_filtered.vcf",
-        dist =  f"{CORE_DIR}/core_gene_alignment_filtered.fasta.DM",
-        snp_fasta = f"{CORE_DIR}/core_gene_alignment_filtered.SNPs.fasta",
-        fconts_file = f"{CORE_DIR}/core_gene_alignment_filtered.fconst.txt",
+        vcf = f"{PANAROO_DIR}/{CORE_PREFIX}_gene_alignment_filtered.vcf",
+        dist =  f"{PANAROO_DIR}/{CORE_PREFIX}_gene_alignment_filtered.fasta.DM",
+        snp_fasta = f"{PANAROO_DIR}/{CORE_PREFIX}_gene_alignment_filtered.SNPs.fasta",
+        fconts_file = f"{PANAROO_DIR}/{CORE_PREFIX}_gene_alignment_filtered.fconst.txt",
     conda:
-        "iqtree_env"
+        "panaroo_env"
     threads: config["threads"]
     shell:
         r'''
@@ -124,12 +147,12 @@ rule prepare_tree_filtered:
 
 rule iqtree_tree_filtered:
     input:
-        snp_fasta = f"{CORE_DIR}/core_gene_alignment_filtered.SNPs.fasta",
-        fconts_file = f"{CORE_DIR}/core_gene_alignment_filtered.fconst.txt",
+        snp_fasta = f"{PANAROO_DIR}/{CORE_PREFIX}_gene_alignment_filtered.SNPs.fasta",
+        fconts_file = f"{PANAROO_DIR}/{CORE_PREFIX}_gene_alignment_filtered.fconst.txt",
     output:
         tree_file =  f"{IQTREE_PREFIX}.treefile"
     conda:
-        "iqtree_env"
+        "panaroo_env"
     params:
         model = config["iqtree"]["model"],
         bootstrap = config["iqtree"]["bootstrap"],

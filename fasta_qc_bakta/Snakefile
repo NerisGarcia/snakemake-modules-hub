@@ -69,8 +69,12 @@ rule bakta_cleanup:
         prefix="{sample}"
     shell:
         """
-        ln -sfn {params.out_dir}/{params.prefix}.gff3 {output.gff3}
-        ln -sfn {params.out_dir}/{params.prefix}.fna {output.fna}
+        bakta_dir=$(cd "{params.out_dir}" && pwd)
+        gff3_path=$(find "$bakta_dir" -type f -name "{params.prefix}.gff3" -print -quit)
+        fna_path=$(find "$bakta_dir" -type f -name "{params.prefix}.fna" -print -quit)
+        test -n "$gff3_path" && test -n "$fna_path"
+        ln -sfn "$gff3_path" "{output.gff3}"
+        ln -sfn "$fna_path" "{output.fna}"
 
         rm -f {params.out_dir}/{params.prefix}.embl \
               {params.out_dir}/{params.prefix}.png \

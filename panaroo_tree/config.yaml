@@ -1,21 +1,22 @@
 
 # One isolate ID per line; each isolate must have a GFF under annot_dir/{isolate}.gff3.
-sample_list: "data/test/isolates.txt"
+sample_list: "data/test/307627_ncbi_genomes_accessions.txt"
 
 # Directory containing annotation outputs, with parent-level files such as {isolate}.gff3.
-annot_dir: "data/test/genomes"
+annot_dir: "data/test/02_annotation"
 
-genomics_results_dir: "data/results"
+genomics_results_dir: "data/test"
+
 threads: 8
 
 panaroo:
   clean_mode: "strict"
   alignment: "core"
   family_threshold: 0.7
-  core_threshold: 0.98
-  refind_mode: "full"
+  core_threshold: 0.9
+  refind_mode: "default"
   aligner: "mafft"
 
 iqtree:
-  model: "GTR+ASC"
+  model: "GTR+I+G"
   bootstrap: 1000

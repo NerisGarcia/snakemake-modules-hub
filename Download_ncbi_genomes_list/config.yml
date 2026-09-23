@@ -1,6 +1,6 @@
 
-accessions_file: data/test/1580_ncbi_genomes_accessions.txt
+accessions_file: data/test/307627_ncbi_genomes_accessions.txt
 
 dataset_out_dir:  data/test
 
-dataset_name: Lactobacillus_ncbi_genomes
+dataset_name: Wporifererum_ncbi
