@@ -1,0 +1,25 @@
+
+# One isolate ID per line, must match {isolate}_bakta folder names under annot_dir.
+sample_list: "data/test/isolates.txt"
+
+# Directory containing bakta annotation output, one {isolate}_bakta subfolder per isolate.
+annot_dir: "data/results/02_annotation"
+
+# Reference genome GFF3 (unedited) included alongside the isolates in the pangenome.
+ref_gff: "data/ref/reference.gff3"
+
+genomics_results_dir: "data/results"
+
+panaroo:
+  clean_mode: "strict"
+  alignment: "core"
+  family_threshold: 0.7
+  core_threshold: 0.98
+  refind_mode: "full"
+  aligner: "mafft"
+  threads: 16
+
+iqtree:
+  model: "GTR+ASC"
+  bootstrap: 1000
+  threads: 8

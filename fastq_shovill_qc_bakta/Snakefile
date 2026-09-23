@@ -20,6 +20,19 @@ BUSCO_OUTPUT =  f"{QC_DIR}/BUSCO"
 BUSCO_LINEAGE = config["busco_lineage"]
 QUAST_OUTPUT = f"{QC_DIR}/QUAST"
 
+# expected final output per sample for each step, used only by the summary table
+# "input_r1"/"input_r2" flag samples whose raw reads are missing because the SRA download step upstream failed
+STEP_TARGETS = {
+    "input_r1": expand(f"{RAW_DIR}/{{sample}}_1.fastq.gz", sample=SAMPLES),
+    "input_r2": expand(f"{RAW_DIR}/{{sample}}_2.fastq.gz", sample=SAMPLES),
+    "fastp": expand(f"{CLEAN_DIR}/{{sample}}.fastp.json", sample=SAMPLES),
+    "shovill": expand(f"{ASS_DIR}/{{sample}}_shovill/{{sample}}.contigs.fa", sample=SAMPLES),
+    "bakta": expand(f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.gff3", sample=SAMPLES),
+    "busco": expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt", sample=SAMPLES),
+    "quast": expand(f"{QUAST_OUTPUT}/{{sample}}.quast.transposed_report.tsv", sample=SAMPLES),
+}
+SUMMARY_TABLE = f"{QC_DIR}/pipeline_summary.tsv"
+
 
 rule all:
     input:
@@ -144,3 +157,23 @@ rule assembly_qc_sample:
         mv {params.out_dir}/transposed_report.tsv {output}
         rm -rf {params.out_dir}
         '''
+
+
+# runs after the DAG finishes (success or --keep-going with failures) in the same invocation
+def write_summary_table():
+    import os
+    os.makedirs(QC_DIR, exist_ok=True)
+    with open(SUMMARY_TABLE, "w") as out:
+        out.write("sample\t" + "\t".join(STEP_TARGETS.keys()) + "\n")
+        for i, sample in enumerate(SAMPLES):
+            row = [sample]
+            for paths in STEP_TARGETS.values():
+                path = paths[i]
+                row.append("OK" if os.path.exists(path) and os.path.getsize(path) > 0 else "FAIL")
+            out.write("\t".join(row) + "\n")
+
+onsuccess:
+    write_summary_table()
+
+onerror:
+    write_summary_table()

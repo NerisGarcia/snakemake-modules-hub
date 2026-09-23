@@ -1,0 +1,165 @@
+import os
+
+SAMPLE_FILE = config["sample_list"]
+
+with open(SAMPLE_FILE) as handle:
+    SAMPLES = [
+        line.strip()
+        for line in handle
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+
+if not SAMPLES:
+    raise ValueError("The isolate sample list is empty")
+
+ANNOT_DIR = config["annot_dir"]
+RESULTS_DIR = config["genomics_results_dir"]
+CORE_DIR = f"{RESULTS_DIR}/04_pangenome"
+
+REF_GFF = config["ref_gff"]
+REF_GFF_EDITED = f"{os.path.dirname(REF_GFF)}/edited/{os.path.basename(REF_GFF)}"
+
+GFF_PATHS = f"{CORE_DIR}/gff_paths.txt"
+IQTREE_PREFIX = f"{CORE_DIR}/iqtree/core_gene_alignment_filtered"
+
+
+rule all:
+    input:
+        f"{CORE_DIR}/gene_presence_absence.Rtab",
+        f"{CORE_DIR}/gene_presence_absence_roary.csv",
+        f"{IQTREE_PREFIX}.treefile"
+
+
+# PANGENOME ——————————————————————————————————————————————————————————————
+
+rule edit_gff_to_remove_gene:
+    input:
+        gff=f"{ANNOT_DIR}/{{isolate}}_bakta/{{isolate}}.gff3"
+    output:
+        edited_gff=(f"{ANNOT_DIR}/{{isolate}}_bakta/edited/{{isolate}}.gff3")
+    shell:
+        r'''
+        mkdir -p $(dirname {output.edited_gff})
+        sed 's/;gene=[^;]*//' {input.gff} > {output.edited_gff}
+        '''
+
+
+
+rule edit_gff_to_remove_gene_ref:
+    input:
+        gff=REF_GFF
+    output:
+        edited_gff=REF_GFF_EDITED
+    shell:
+        r'''
+        mkdir -p $(dirname {output.edited_gff})
+        sed 's/;gene=[^;]*//' {input.gff} > {output.edited_gff}
+        '''
+
+rule pangenome_gff_paths:
+    input:
+        sample_list=SAMPLE_FILE,
+        annot_dir=ANNOT_DIR,
+        ref_gff=REF_GFF_EDITED,
+        edited_gffs=  expand(f"{ANNOT_DIR}/{{isolate}}_bakta/edited/{{isolate}}.gff3", isolate=SAMPLES)
+
+    output:
+        GFF_PATHS
+    shell:
+        r'''
+        out_dir=$(dirname {output})
+        
+        mkdir -p "$out_dir"
+        printf '%s\n' {input.edited_gffs} | grep -Ff "{input.sample_list}" > {output}
+        printf '%s\n' "{input.ref_gff}" >> {output}
+        '''
+
+rule pangenome_panaroo_with_ref_for_gwas:
+    input:
+        gff_paths=GFF_PATHS
+    output:
+        gene_presence_absence = f"{CORE_DIR}/gene_presence_absence.Rtab",
+        core_alignment      = f"{CORE_DIR}/core_gene_alignment.aln",
+        core_aln_filtered   = f"{CORE_DIR}/core_gene_alignment_filtered.aln",
+        core_aln_filtered_head= f"{CORE_DIR}/core_alignment_filtered_header.embl",        
+        core_aln_head     = f"{CORE_DIR}/core_alignment_header.embl",
+        pan_ref_alignment      = f"{CORE_DIR}/pan_genome_reference.fa",
+        pangenome = f"{CORE_DIR}/gene_presence_absence_roary.csv", 
+
+    params:
+        out_dir = CORE_DIR,
+        clean_mode=config["panaroo"]["clean_mode"],
+        alignment=config["panaroo"]["alignment"],
+        family_threshold=config["panaroo"]["family_threshold"],
+        core_threshold=config["panaroo"]["core_threshold"],
+        refind_mode=config["panaroo"]["refind_mode"],
+        aligner=config["panaroo"]["aligner"],
+    threads: config["panaroo"]["threads"]
+    conda:
+        "panaroo"
+    shell:
+        r'''
+        mkdir -p {params.out_dir}
+
+        panaroo \
+          -i $(cat {input.gff_paths}) \
+          -o {params.out_dir} \
+          --clean-mode {params.clean_mode} \
+          --remove-invalid-genes \
+          -a {params.alignment} \
+          --family_threshold {params.family_threshold} \
+          --core_threshold {params.core_threshold} \
+          --merge_paralogs \
+          --refind-mode {params.refind_mode} \
+          --aligner {params.aligner} \
+          --threads {threads} 
+ 
+       '''
+
+rule prepare_tree_filtered:
+    input:
+        core_aln_filtered  = f"{CORE_DIR}/core_gene_alignment_filtered.aln",    
+    output:
+        vcf = f"{CORE_DIR}/core_gene_alignment_filtered.vcf",
+        dist =  f"{CORE_DIR}/core_gene_alignment_filtered.fasta.DM",
+        snp_fasta = f"{CORE_DIR}/core_gene_alignment_filtered.SNPs.fasta",
+        fconts_file = f"{CORE_DIR}/core_gene_alignment_filtered.fconst.txt",
+    conda:
+        "iqtree_env"
+    threads: 8
+    shell:
+        r'''
+          
+        snp-sites -v {input.core_aln_filtered} > {output.vcf}
+
+        snp-dists -j {threads} -m {input.core_aln_filtered} > {output.dist}
+
+        snp-sites -o {output.snp_fasta} {input.core_aln_filtered}
+
+        fconstsvar=$(snp-sites -C {input.core_aln_filtered})
+
+        echo $fconstsvar > {output.fconts_file}
+
+        '''
+
+
+rule iqtree_tree_filtered:
+    input:
+        snp_fasta = f"{CORE_DIR}/core_gene_alignment_filtered.SNPs.fasta",
+        fconts_file = f"{CORE_DIR}/core_gene_alignment_filtered.fconst.txt",
+    output:
+        tree_file =  f"{IQTREE_PREFIX}.treefile"
+    conda:
+        "iqtree_env"
+    params:
+        model = config["iqtree"]["model"],
+        bootstrap = config["iqtree"]["bootstrap"],
+        threads = config["iqtree"]["threads"],
+        prefix = f"{IQTREE_PREFIX}"
+
+    shell:
+        r'''
+        fconstsvar=$(cat {input.fconts_file})
+        iqtree3 -s {input.snp_fasta} -m {params.model} -B {params.bootstrap} -nt {params.threads} --redo -fconst $fconstsvar --prefix {params.prefix}
+
+        '''

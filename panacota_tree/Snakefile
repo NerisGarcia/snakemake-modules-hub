@@ -1,0 +1,202 @@
+PNAME = config["pangenome_name"]
+ISOLATE_LIST = config["isolate_list"]
+PANACOTA_DB = config["panacota_db_dir"]
+
+RESULTS_DIR = config["genomics_results_dir"]
+PANACOTA_DIR = f"{RESULTS_DIR}/05_panacota/{PNAME}"
+
+CORE_THRESHOLD = config["panacota"]["core_threshold"]
+ALIGN_DIR = f"{PANACOTA_DIR}/Align{CORE_THRESHOLD}"
+ALIGN_GENES_DIR = f"{ALIGN_DIR}/Align-{PNAME}"
+MAFFT_DIR = f"{ALIGN_DIR}/mafft"
+HMMCLEAN_DIR = f"{ALIGN_DIR}/hmmcleaner"
+
+TREE_DIR = f"{ALIGN_DIR}/Phylo-{PNAME}"
+CORE_ALIGNMENT_PREFIX = f"{TREE_DIR}/{PNAME}_fixcore{CORE_THRESHOLD}"
+IQTREE_PREFIX = CORE_ALIGNMENT_PREFIX
+
+
+rule all:
+    input:
+        f"{IQTREE_PREFIX}.treefile"
+
+
+# PANACOTA PANGENOME / COREPERS / ALIGN ———————————————————————————————————
+
+rule panacota_pangenome:
+    input:
+        isolate_list=ISOLATE_LIST
+    output:
+        pangenome_lst=f"{PANACOTA_DIR}/PanGenome-{PNAME}.lst"
+    params:
+        out_dir=PANACOTA_DIR,
+        db_dir=PANACOTA_DB,
+        pname=PNAME
+    threads: config["panacota"]["threads"]
+    conda:
+        "panacota_env"
+    shell:
+        r'''
+        mkdir -p {params.out_dir}
+        PanACoTA pangenome -l {input.isolate_list} -n {params.pname} \
+            -d {params.db_dir} -o {params.out_dir} --threads {threads}
+
+        mv $(ls {params.out_dir}/PanGenome-{params.pname}*.lst | head -n1) {output.pangenome_lst}
+        '''
+
+
+rule panacota_corepers:
+    input:
+        pangenome_lst=f"{PANACOTA_DIR}/PanGenome-{PNAME}.lst"
+    output:
+        persgenome_lst=f"{PANACOTA_DIR}/PersGenome-{PNAME}_{CORE_THRESHOLD}.lst"
+    params:
+        out_dir=PANACOTA_DIR,
+        threshold=CORE_THRESHOLD
+    conda:
+        "panacota_env"
+    shell:
+        r'''
+        PanACoTA corepers -p {input.pangenome_lst} -t {params.threshold} -o {params.out_dir}
+
+        mv $(ls {params.out_dir}/PersGenome*_{params.threshold}.lst | head -n1) {output.persgenome_lst}
+        '''
+
+
+# per-gene alignments are only known once PanACoTA align has run, hence the checkpoint
+checkpoint panacota_align:
+    input:
+        persgenome_lst=f"{PANACOTA_DIR}/PersGenome-{PNAME}_{CORE_THRESHOLD}.lst",
+        isolate_list=ISOLATE_LIST
+    output:
+        align_dir=directory(ALIGN_GENES_DIR)
+    params:
+        out_dir=ALIGN_DIR,
+        db_dir=PANACOTA_DB,
+        pname=PNAME
+    threads: config["panacota"]["threads"]
+    conda:
+        "panacota_env"
+    shell:
+        r'''
+        mkdir -p {params.out_dir}
+        PanACoTA align --threads {threads} -F -n {params.pname} \
+            -c {input.persgenome_lst} -l {input.isolate_list} \
+            -d {params.db_dir} -o {params.out_dir}
+        '''
+
+
+def get_genes(wildcards):
+    align_dir = checkpoints.panacota_align.get(**wildcards).output.align_dir
+    genes, = glob_wildcards(f"{align_dir}/{{gene}}.gen")
+    return genes
+
+
+def get_cleaned_alignments(wildcards):
+    return expand(f"{HMMCLEAN_DIR}/{{gene}}.mafft_hmm.fasta", gene=get_genes(wildcards))
+
+
+# PER-GENE ALIGNMENT + CLEANING ————————————————————————————————————————————
+
+rule strip_and_mafft_gene:
+    input:
+        gene=f"{ALIGN_GENES_DIR}/{{gene}}.gen"
+    output:
+        mafft=f"{MAFFT_DIR}/{{gene}}.mafft.fasta"
+    threads: config["mafft"]["threads"]
+    conda:
+        "panacota_env"
+    shell:
+        r'''
+        mkdir -p {MAFFT_DIR}
+        stripped=$(mktemp)
+        sed 's/_[0-9]\{{5\}}\($\| .*\)//' {input.gene} > "$stripped"
+
+        mafft --thread {threads} --adjustdirection "$stripped" > {output.mafft}
+
+        sed -i 's/_[0-9]\{{5\}}\($\| .*\)//' {output.mafft}
+        sed -i 's/_R_//g' {output.mafft}
+        rm -f "$stripped"
+        '''
+
+
+rule hmmcleaner_gene:
+    input:
+        mafft=f"{MAFFT_DIR}/{{gene}}.mafft.fasta"
+    output:
+        cleaned=f"{HMMCLEAN_DIR}/{{gene}}.mafft_hmm.fasta"
+    params:
+        extra=config["hmmcleaner"]["extra_args"],
+        work_fasta=f"{HMMCLEAN_DIR}/{{gene}}.mafft.fasta"
+    conda:
+        "hmmcleaner_env"
+    shell:
+        r'''
+        mkdir -p {HMMCLEAN_DIR}
+        cp {input.mafft} {params.work_fasta}
+
+        HmmCleaner.pl {params.work_fasta} {params.extra}
+        '''
+
+
+# CORE ALIGNMENT + TREE —————————————————————————————————————————————————————
+
+rule concat_core_alignment:
+    input:
+        get_cleaned_alignments
+    output:
+        fasta=f"{CORE_ALIGNMENT_PREFIX}.fasta",
+        partitions=f"{CORE_ALIGNMENT_PREFIX}.partitions"
+    threads: config["panacota"]["threads"]
+    conda:
+        "panacota_env"
+    shell:
+        r'''
+        mkdir -p {TREE_DIR}
+        AMAS.py concat -i {input} -f fasta -d dna -c {threads} -t {output.fasta} -p {output.partitions}
+        '''
+
+
+rule prepare_tree:
+    input:
+        core_alignment=f"{CORE_ALIGNMENT_PREFIX}.fasta"
+    output:
+        vcf=f"{CORE_ALIGNMENT_PREFIX}.vcf",
+        dist=f"{CORE_ALIGNMENT_PREFIX}.fasta.DM",
+        snp_fasta=f"{CORE_ALIGNMENT_PREFIX}.SNPs.fasta",
+        fconst_file=f"{CORE_ALIGNMENT_PREFIX}_fconst.txt"
+    conda:
+        "iqtree_env"
+    threads: 8
+    shell:
+        r'''
+        snp-sites -v {input.core_alignment} > {output.vcf}
+
+        snp-dists -j {threads} -m {input.core_alignment} > {output.dist}
+
+        snp-sites -o {output.snp_fasta} {input.core_alignment}
+
+        fconstsvar=$(snp-sites -C {input.core_alignment})
+
+        echo $fconstsvar > {output.fconst_file}
+        '''
+
+
+rule iqtree_tree:
+    input:
+        snp_fasta=f"{CORE_ALIGNMENT_PREFIX}.SNPs.fasta",
+        fconst_file=f"{CORE_ALIGNMENT_PREFIX}_fconst.txt"
+    output:
+        tree_file=f"{IQTREE_PREFIX}.treefile"
+    conda:
+        "iqtree_env"
+    params:
+        model=config["iqtree"]["model"],
+        bootstrap=config["iqtree"]["bootstrap"],
+        threads=config["iqtree"]["threads"],
+        prefix=IQTREE_PREFIX
+    shell:
+        r'''
+        fconstsvar=$(cat {input.fconst_file})
+        iqtree3 -s {input.snp_fasta} -m {params.model} -B {params.bootstrap} -nt {params.threads} --redo -fconst $fconstsvar --prefix {params.prefix}
+        '''

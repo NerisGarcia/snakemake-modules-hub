@@ -1,0 +1,27 @@
+
+# One isolate ID per line, matching the PanACoTA database naming (-l flag).
+isolate_list: "data/test/isolates.txt"
+
+# Protein/genome database directory formatted for PanACoTA (-d flag).
+panacota_db_dir: "data/panacota_db"
+
+# Name of the pangenome, used as PanACoTA's -n prefix.
+pangenome_name: "MyPangenome"
+
+genomics_results_dir: "data/results"
+
+panacota:
+  core_threshold: 0.9
+  threads: 8
+
+mafft:
+  threads: 8
+
+# Extra CLI flags passed straight to HmmCleaner.pl, e.g. "--costs 0,0,1,1"
+hmmcleaner:
+  extra_args: ""
+
+iqtree:
+  model: "GTR+G"
+  bootstrap: 1000
+  threads: 8
