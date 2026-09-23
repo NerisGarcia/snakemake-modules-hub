@@ -5,6 +5,7 @@ genome_acc_list: "data/test/Winogradskyella_thalassocola_sra_runexperiments_acce
 # FASTQ files must be named {accession}_1.fastq.gz and {accession}_2.fastq.gz.
 ass_dir: "/Volumes/Scratch/neris/02_lacto_genomics/data/0_input_data/0_ncbi_genomes/genomes"
 genomics_results_dir: "data/results"
+summary_table: "data/results/03_qc/pipeline_summary.tsv"
 
 bakta_db: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/bakta/27apr2026/db-light"
 

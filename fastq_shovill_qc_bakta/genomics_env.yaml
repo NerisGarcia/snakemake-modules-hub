@@ -1,0 +1,11 @@
+name: genomics_env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - shovill=1.1.0
+  - fastp
+  - bakta
+  - busco
+prefix: /opt/miniconda3/envs/genomics_env

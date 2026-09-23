@@ -1,0 +1,17 @@
+name: quast_full_env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - busco
+  - matplotlib
+  - bedtools
+  - python
+  - gridss
+  - glimmerhmm
+  - bwa
+  - minimap2
+  - barrnap
+  - sambamba
+prefix: /opt/miniconda3/envs/quast_full_env

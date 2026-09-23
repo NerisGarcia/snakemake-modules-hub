@@ -6,6 +6,7 @@ sra_acc_list: "data/test/Winogradskyella_thalassocola_sra_runexperiments_accessi
 sra_raw: "data/test/SRA_fastq"
 clean_dir: "data/clean"
 genomics_results_dir: "data/results"
+summary_table: "data/results/03_qc/pipeline_summary.tsv"
 
 bakta_db: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/bakta/27apr2026/db-light"
 

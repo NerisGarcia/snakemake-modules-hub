@@ -17,6 +17,7 @@ BAKTA_DB_DIR = config["bakta_db"]
 BUSCO_OUTPUT =  f"{QC_DIR}/BUSCO"
 BUSCO_LINEAGE = config["busco_lineage"]
 QUAST_OUTPUT = f"{QC_DIR}/QUAST"
+SUMMARY_TABLE = config["summary_table"]
 
 # expected final output per sample for each step, used only by the summary table
 # "input" flags samples whose assembly is missing because the download step upstream failed
@@ -26,9 +27,6 @@ STEP_TARGETS = {
     "busco": expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt", sample=SAMPLES),
     "quast": expand(f"{QUAST_OUTPUT}/{{sample}}.quast.transposed_report.tsv", sample=SAMPLES),
 }
-SUMMARY_TABLE = f"{QC_DIR}/pipeline_summary.tsv"
-
-
 rule all:
     input:
         expand(f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.gff3", sample=SAMPLES),
@@ -109,7 +107,9 @@ rule assembly_qc_sample:
 # runs after the DAG finishes (success or --keep-going with failures) in the same invocation
 def write_summary_table():
     import os
-    os.makedirs(QC_DIR, exist_ok=True)
+    summary_dir = os.path.dirname(SUMMARY_TABLE)
+    if summary_dir:
+        os.makedirs(summary_dir, exist_ok=True)
     with open(SUMMARY_TABLE, "w") as out:
         out.write("sample\t" + "\t".join(STEP_TARGETS.keys()) + "\n")
         for i, sample in enumerate(SAMPLES):

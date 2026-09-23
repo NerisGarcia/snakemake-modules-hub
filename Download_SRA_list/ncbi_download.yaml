@@ -1,0 +1,9 @@
+name: ncbi_download
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - ncbi-datasets-cli
+  - entrez-direct
+prefix: /opt/miniconda3/envs/ncbi_download
