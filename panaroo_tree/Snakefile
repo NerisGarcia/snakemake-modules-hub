@@ -14,7 +14,8 @@ if not SAMPLES:
 
 ANNOT_DIR = config["annot_dir"]
 RESULTS_DIR = config["genomics_results_dir"]
-CORE_DIR = f"{RESULTS_DIR}/04_pangenome"
+DATASET_NAME = config["dataset_name"]
+CORE_DIR = f"{RESULTS_DIR}/04_pangenome/{DATASET_NAME}"
 CORE_THRESHOLD = config["panaroo"]["core_threshold"]
 PANAROO_DIR = f"{CORE_DIR}/core_{CORE_THRESHOLD}"
 CORE_PREFIX = f"core{CORE_THRESHOLD}"

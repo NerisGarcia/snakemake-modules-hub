@@ -2,6 +2,8 @@
 # One isolate ID per line; each isolate must have a GFF under annot_dir/{isolate}.gff3.
 sample_list: "data/test/307627_ncbi_genomes_accessions.txt"
 
+dataset_name: "307627_ncbi_genomes"
+
 # Directory containing annotation outputs, with parent-level files such as {isolate}.gff3.
 annot_dir: "data/test/02_annotation"
 
