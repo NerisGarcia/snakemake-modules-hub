@@ -21,10 +21,22 @@ CHECKM2_OUTPUT = f"{QC_DIR}/CheckM2"
 CHECKM2_DB = config["checkm2_db"]
 SUMMARY_TABLE = config["summary_table"]
 
+def assembly_path(sample):
+    import os
+
+    candidates = [f"{ASS_DIR}/{sample}.fna", f"{ASS_DIR}/{sample}.fasta"]
+    return next((path for path in candidates if os.path.isfile(path)), candidates[0])
+
+def assembly_input(wildcards):
+    return assembly_path(wildcards.sample)
+
+wildcard_constraints:
+    sample="[^/]+"
+
 # expected final output per sample for each step, used only by the summary table
 # "input" flags samples whose assembly is missing because the download step upstream failed
 STEP_TARGETS = {
-    "input": expand(f"{ASS_DIR}/{{sample}}.fna", sample=SAMPLES),
+    "input": [assembly_path(sample) for sample in SAMPLES],
     "bakta": expand(f"{ANN_DIR}/{{sample}}.gff3", sample=SAMPLES),
     "busco": expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt", sample=SAMPLES),
     "quast": expand(f"{QUAST_OUTPUT}/{{sample}}.quast.transposed_report.tsv", sample=SAMPLES),
@@ -59,7 +71,7 @@ rule checkm2:
 
 rule bakta:
     input:
-        contigs=f"{ASS_DIR}/{{sample}}.fna"
+        contigs=assembly_input
     output:
         gff3=f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.gff3",
         fna=f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna"
