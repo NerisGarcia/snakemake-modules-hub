@@ -1,0 +1,8 @@
+name: checkm2_env
+channels:
+  - defaults
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.7
+  - checkm2

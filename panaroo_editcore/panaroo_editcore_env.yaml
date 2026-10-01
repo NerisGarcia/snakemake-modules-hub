@@ -1,0 +1,9 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - iqtree
+  - mafft
+  - panaroo
+  - snp-dists
+  - snp-sites

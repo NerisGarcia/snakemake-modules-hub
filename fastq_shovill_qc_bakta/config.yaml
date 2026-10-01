@@ -18,3 +18,4 @@ threads:
   fastp: 16
   shovill: 16
   bakta: 4
+  checkm2: 8

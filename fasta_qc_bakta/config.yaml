@@ -10,6 +10,7 @@ genomics_results_dir: "data/test"
 summary_table: "data/test/Wporifererum_ncbi.pipeline_summary.tsv"
 
 bakta_db: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/bakta/27apr2026/db-light"
+checkm2_db: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/checkm2/CheckM2_database/uniref100.KO.1.dmnd"
 
 busco_lineage: "bacteria_odb12"
 
@@ -17,3 +18,4 @@ threads:
   fastp: 16
   shovill: 16
   bakta: 4
+  checkm2: 8

@@ -29,6 +29,33 @@ The accession file must contain one SRA accession per line. The resulting paired
 {accession}_1.fastq.gz
 {accession}_2.fastq.gz
 ```
+## 3. Obtain NCBI genome assemblies
+
+### From a taxonomic ID
+
+Edit [Fetch_ncbi_genomes_taxid/config.yml](Fetch_ncbi_genomes_taxid/config.yml), then run:
+
+```bash
+snakemake --use-conda --cores 1 --snakefile Fetch_ncbi_genomes_taxid/snakemake.smk
+```
+This dowloads all metadata and creates an accession list. You cna filter the accession list using the metadata and feed the filtered accession list to the dowload step
+
+### Dowload ncbi genomes from an accession list
+
+Edit [Download_ncbi_genomes_list/config.yml](Download_ncbi_genomes_list/config.yml), then run:
+
+```bash
+snakemake --use-conda --cores 1 --snakefile Download_ncbi_genomes_list/snakemake.smk
+```
+
+The accession list contains one NCBI genome accession per line. Set the output directory in the config before running.
+
+## X. get Biosample info
+
+```bash
+snakemake --use-conda --cores 1 --snakefile get_biosample_attributes/snakemake.smk --configfile get_biosample_attributes/config.yml 
+```
+-- This has to be core 1 if not it gives error
 
 ## 2. Run the FASTQ assembly and annotation pipeline
 
@@ -72,26 +99,6 @@ data/results/03_qc/QUAST/
 
 Bakta writes its complete output inside `{sample}_bakta`. A separate cleanup step creates the parent-level `.gff3` and `.fna` symlinks and removes unwanted `.embl`, `.png`, `.svg`, and hypothetical files. If the nested Bakta outputs already exist, rerunning the workflow can perform only this cleanup step.
 
-## 3. Obtain NCBI genome assemblies
-
-### From a taxonomic ID
-
-Edit [Fetch_ncbi_genomes_taxid/config.yml](Fetch_ncbi_genomes_taxid/config.yml), then run:
-
-```bash
-snakemake --use-conda --cores 1 --snakefile Fetch_ncbi_genomes_taxid/snakemake.smk
-```
-This dowloads all metadata and creates an accession list. You cna filter the accession list using the metadata and feed the filtered accession list to the dowload step
-
-### Dowload ncbi genomes from an accession list
-
-Edit [Download_ncbi_genomes_list/config.yml](Download_ncbi_genomes_list/config.yml), then run:
-
-```bash
-snakemake --use-conda --cores 1 --snakefile Download_ncbi_genomes_list/snakemake.smk
-```
-
-The accession list contains one NCBI genome accession per line. Set the output directory in the config before running.
 
 ## 4. Run the FASTA annotation and QC pipeline
 
@@ -166,3 +173,29 @@ snakemake \
     --cores 8 \
     --snakefile panacota_tree/Snakefile \
     --configfile panacota_tree/config.yaml 
+
+
+# panaroo changing core 
+
+
+This pipeline creates a pangenome
+Edit these settings:
+
+```yaml
+sample_list: "path/to/isolates.txt"
+annot_dir: "data/results/02_annotation"
+genomics_results_dir: "data/results"
+threads: 8
+```
+
+
+Run:
+
+```bash
+snakemake \
+  --use-conda \
+  --cores 8 \
+  --keep-going \
+  --snakefile panaroo_editcore/Snakefile \
+  --configfile panaroo_editcore/config.yaml
+```

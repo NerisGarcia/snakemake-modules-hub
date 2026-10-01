@@ -1,0 +1,38 @@
+
+# One isolate ID per line; each isolate must have a GFF under annot_dir/{isolate}.gff3.
+sample_list: "data/test/307627_ncbi_genomes_accessions.txt"
+
+dataset_name: "307627_ncbi_genomes"
+
+# Directory containing annotation outputs, with parent-level files such as {isolate}.gff3.
+annot_dir: "data/test/02_annotation"
+
+genomics_results_dir: "data/test"
+
+threads: 8
+
+panaroo:
+  # Optional completed Panaroo output directory; defaults to <dataset>/all_samples.
+  existing_pangenome_dir: null
+  clean_mode: "strict"
+  family_threshold: 0.7
+  core_threshold: 0.9
+  refind_mode: "default"
+  aligner: "mafft"
+
+custom_alignment:
+  # Leave either path empty or null to disable that selection.
+  core_sample_list: "data/test/307627_core_samples.txt"
+  analysis_sample_list: "data/test/307627_ncbi_genomes_accessions.txt"
+  # This threshold applies to derived selections; it does not rerun Panaroo.
+  core_threshold: 0.9
+  # These are dataset labels; fixed core/subsample prefixes are added by Snakefile.
+  core_name: "v1"
+  subsample_name: "only_isolates"
+  # Custom sample selections require this for a matching alignment and tree.
+  realign_and_clean: true
+  include_amas_summary: true
+
+iqtree:
+  model: "GTR+I+G"
+  bootstrap: 1000

@@ -19,6 +19,8 @@ BAKTA_DB_DIR = config["bakta_db"]
 BUSCO_OUTPUT =  f"{QC_DIR}/BUSCO"
 BUSCO_LINEAGE = config["busco_lineage"]
 QUAST_OUTPUT = f"{QC_DIR}/QUAST"
+CHECKM2_OUTPUT = f"{QC_DIR}/CheckM2"
+CHECKM2_DB = config["checkm2_db"]
 SUMMARY_TABLE = config["summary_table"]
 
 # expected final output per sample for each step, used only by the summary table
@@ -31,6 +33,7 @@ STEP_TARGETS = {
     "bakta": expand(f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.gff3", sample=SAMPLES),
     "busco": expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt", sample=SAMPLES),
     "quast": expand(f"{QUAST_OUTPUT}/{{sample}}.quast.transposed_report.tsv", sample=SAMPLES),
+    "checkm2": expand(f"{CHECKM2_OUTPUT}/{{sample}}/quality_report.tsv", sample=SAMPLES),
 }
 rule all:
     input:
@@ -43,7 +46,8 @@ rule summary_table:
         expand(f"{ASS_DIR}/{{sample}}_shovill/{{sample}}.contigs.fa", sample=SAMPLES),
         expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt", sample=SAMPLES),
         expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv", sample=SAMPLES),
-        expand(f"{QUAST_OUTPUT}/{{sample}}.quast.transposed_report.tsv", sample=SAMPLES)
+        expand(f"{QUAST_OUTPUT}/{{sample}}.quast.transposed_report.tsv", sample=SAMPLES),
+        expand(f"{CHECKM2_OUTPUT}/{{sample}}/quality_report.tsv", sample=SAMPLES)
     output:
         SUMMARY_TABLE
     run:
@@ -72,6 +76,24 @@ rule fastp:
             --thread {threads} --dedup --trim_tail1 3 --trim_tail2 3 \
             --length_required 120 -q 30 -u 80 \
             --trim_front1 2 --trim_front2 2
+        """
+
+rule checkm2:
+    input:
+        f"{ANN_DIR}/{{sample}}.fna"
+    output:
+        f"{CHECKM2_OUTPUT}/{{sample}}/quality_report.tsv"
+    params:
+        out_dir=f"{CHECKM2_OUTPUT}/{{sample}}",
+        database=CHECKM2_DB
+    threads: config["threads"]["checkm2"]
+    conda:
+        "checkm2_env"
+    shell:
+        """
+        mkdir -p {params.out_dir}
+        checkm2 predict --input {input} --output-directory {params.out_dir} \
+            --database_path {params.database} --threads {threads} --force
         """
 
 
