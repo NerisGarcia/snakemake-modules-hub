@@ -35,19 +35,29 @@ STEP_TARGETS = {
     "quast": expand(f"{QUAST_OUTPUT}/{{sample}}.quast.transposed_report.tsv", sample=SAMPLES),
     "checkm2": expand(f"{CHECKM2_OUTPUT}/{{sample}}/quality_report.tsv", sample=SAMPLES),
 }
+
+SUMMARY_INPUTS = [
+    path
+    for step, paths in STEP_TARGETS.items()
+    if step not in {"input_r1", "input_r2"}
+    for path in paths
+]
+SUMMARY_INPUTS += (
+    expand(f"{CLEAN_DIR}/{{sample}}_1.clean.fastq.gz", sample=SAMPLES)
+    + expand(f"{CLEAN_DIR}/{{sample}}_2.clean.fastq.gz", sample=SAMPLES)
+    + expand(f"{CLEAN_DIR}/{{sample}}.fastp.html", sample=SAMPLES)
+    + expand(f"{ANN_DIR}/{{sample}}.fna", sample=SAMPLES)
+    + expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv", sample=SAMPLES)
+)
+
 rule all:
     input:
-        SUMMARY_TABLE
+        SUMMARY_TABLE,
+        SUMMARY_INPUTS
 
 rule summary_table:
     input:
-        expand(f"{ANN_DIR}/{{sample}}.gff3", sample=SAMPLES),
-        expand(f"{ANN_DIR}/{{sample}}.fna", sample=SAMPLES),
-        expand(f"{ASS_DIR}/{{sample}}_shovill/{{sample}}.contigs.fa", sample=SAMPLES),
-        expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt", sample=SAMPLES),
-        expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv", sample=SAMPLES),
-        expand(f"{QUAST_OUTPUT}/{{sample}}.quast.transposed_report.tsv", sample=SAMPLES),
-        expand(f"{CHECKM2_OUTPUT}/{{sample}}/quality_report.tsv", sample=SAMPLES)
+        SUMMARY_INPUTS
     output:
         SUMMARY_TABLE
     run:
@@ -80,20 +90,21 @@ rule fastp:
 
 rule checkm2:
     input:
-        f"{ANN_DIR}/{{sample}}.fna"
+        genome=f"{ANN_DIR}/{{sample}}.fna",
+        database=CHECKM2_DB
     output:
         f"{CHECKM2_OUTPUT}/{{sample}}/quality_report.tsv"
     params:
-        out_dir=f"{CHECKM2_OUTPUT}/{{sample}}",
-        database=CHECKM2_DB
+        out_dir=f"{CHECKM2_OUTPUT}/{{sample}}"
     threads: config["threads"]["checkm2"]
     conda:
         "checkm2_env"
     shell:
         """
-        mkdir -p {params.out_dir}
-        checkm2 predict --input {input} --output-directory {params.out_dir} \
-            --database_path {params.database} --threads {threads} --force
+        rm -rf "{params.out_dir}"
+        mkdir -p "{params.out_dir}"
+        checkm2 predict --input "{input.genome}" --output-directory "{params.out_dir}" \
+            --database_path "{input.database}" --threads {threads} --force
         """
 
 
