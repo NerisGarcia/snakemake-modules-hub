@@ -3,7 +3,7 @@ configfile: "Download_ncbi_genomes_list/config.yml"
 ACCESSIONS_FILE = config.get("accessions_file")
 DATASET_DIR = config.get("dataset_out_dir")
 DATASET_NAME = config.get("dataset_name")
-INCLUDE_GFF3 = "--include gff3" if config.get("include_gff3", False) else ""
+INCLUDE_GFF3 = " --include genome,gff3" if config.get("include_gff3", False) else ""
 
 ZIPFILE = f"{DATASET_DIR}/{DATASET_NAME}.zip"
 GENOMES_DIR = f"{DATASET_DIR}/{DATASET_NAME}_fna"
