@@ -76,14 +76,17 @@ rule clean_genomes_folder:
 	output:
 		CLEAN_FOLDER_DONEFILE
 	params:
-		dir=f"{DATASET_DIR}/{DATASET_NAME}"
+		dir=f"{DATASET_DIR}/{DATASET_NAME}",
+		genomes_dir=GENOMES_DIR,
+		dataset_dir=DATASET_DIR,
+		dataset_name=DATASET_NAME
 	shell:
 		"""
-		mkdir -p {GENOMES_DIR}
+		mkdir -p {params.genomes_dir}
 
-		if [ -d "{DATASET_DIR}/{DATASET_NAME}" ]; then
-			find {DATASET_DIR}/{DATASET_NAME} -type f -name "*.fna" -print0 | while IFS= read -r -d '' f; do
-				mv -f "$f" "{GENOMES_DIR}/$(basename "$f")"
+		if [ -d "{params.dataset_dir}/{params.dataset_name}" ]; then
+			find {params.dataset_dir}/{params.dataset_name} -type f -name "*.fna" -print0 | while IFS= read -r -d '' f; do
+				mv -f "$f" "{params.genomes_dir}/$(basename "$f")"
 			done
 		fi
 
@@ -97,19 +100,21 @@ rule clean_fna_names:
 		CLEAN_FOLDER_DONEFILE
 	output:
 		CLEAN_DONEFILE
+	params:
+		genomes_dir=GENOMES_DIR
 	shell:
 		"""
 		rename_fna() {{
 			local f="$1"
 			base=$(basename "$f")
 			accession=$(printf '%s\n' "$base" | sed -E 's/^(GC[AF]_[0-9]+\.[0-9]+).*/\\1/')
-			target="{GENOMES_DIR}/$accession.fna"
+			target="{params.genomes_dir}/$accession.fna"
 			if [ "$f" != "$target" ]; then
 				mv -f "$f" "$target"
 			fi
 		}}
 
-		find {GENOMES_DIR} -maxdepth 1 -type f -name "*.fna" -print0 | while IFS= read -r -d '' f; do
+		find {params.genomes_dir} -maxdepth 1 -type f -name "*.fna" -print0 | while IFS= read -r -d '' f; do
 			rename_fna "$f"
 		done
 
