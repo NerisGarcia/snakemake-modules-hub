@@ -3,6 +3,7 @@ configfile: "Download_ncbi_genomes_list/config.yml"
 ACCESSIONS_FILE = config.get("accessions_file")
 DATASET_DIR = config.get("dataset_out_dir")
 DATASET_NAME = config.get("dataset_name")
+INCLUDE_GFF3 = "--include gff3" if config.get("include_gff3", False) else ""
 
 ZIPFILE = f"{DATASET_DIR}/{DATASET_NAME}.zip"
 GENOMES_DIR = f"{DATASET_DIR}/{DATASET_NAME}_fna"
@@ -28,13 +29,14 @@ rule download_genomes_dehydrated:
 	output:
 		ZIPFILE
 	params:
-		dir=DATASET_DIR
+		dir=DATASET_DIR,
+		include_gff3=INCLUDE_GFF3
 	conda:
 		"ncbi_download"
 	shell:
 		"""
 		mkdir -p {params.dir}
-		datasets download genome accession --inputfile {input} --dehydrated --filename {output}
+		datasets download genome accession --inputfile {input} --dehydrated --filename {output} {params.include_gff3}
 		"""
 
 
