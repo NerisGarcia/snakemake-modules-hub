@@ -85,7 +85,7 @@ rule clean_genomes_folder:
 		mkdir -p {params.genomes_dir}
 
 		if [ -d "{params.dataset_dir}/{params.dataset_name}" ]; then
-			find {params.dataset_dir}/{params.dataset_name} -type f -name "*.fna" -print0 | while IFS= read -r -d '' f; do
+			find {params.dataset_dir}/{params.dataset_name} -type f \( -name "*.fna" -o -name "*.gff" -o -name "*.gff3" \) -print0 | while IFS= read -r -d '' f; do
 				mv -f "$f" "{params.genomes_dir}/$(basename "$f")"
 			done
 		fi
@@ -104,18 +104,19 @@ rule clean_fna_names:
 		genomes_dir=GENOMES_DIR
 	shell:
 		"""
-		rename_fna() {{
+		rename_genome_file() {{
 			local f="$1"
 			base=$(basename "$f")
 			accession=$(printf '%s\n' "$base" | sed -E 's/^(GC[AF]_[0-9]+\.[0-9]+).*/\\1/')
-			target="{params.genomes_dir}/$accession.fna"
+			extension="${{base##*.}}"
+			target="{params.genomes_dir}/$accession.$extension"
 			if [ "$f" != "$target" ]; then
 				mv -f "$f" "$target"
 			fi
 		}}
 
-		find {params.genomes_dir} -maxdepth 1 -type f -name "*.fna" -print0 | while IFS= read -r -d '' f; do
-			rename_fna "$f"
+		find {params.genomes_dir} -maxdepth 1 -type f \( -name "*.fna" -o -name "*.gff" -o -name "*.gff3" \) -print0 | while IFS= read -r -d '' f; do
+			rename_genome_file "$f"
 		done
 
 		touch {output}
