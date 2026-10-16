@@ -12,7 +12,7 @@ PANAROO_DIR = os.path.normpath(
     EXISTING_PANAROO_DIR or f"{CORE_DIR}/all_samples_core{PANAROO_CORE_THRESHOLD}"
 )
 PANAROO_GENE_SEQUENCES = f"{PANAROO_DIR}/aligned_gene_sequences"
-PANGENOME_ROOT = f"{RESULTS_DIR}/04_pangenome/{DATASET_NAME}"
+PANGENOME_ROOT = f"{RESULTS_DIR}/04_pangenome_editcore/{DATASET_NAME}"
 PANAROO_CORE_DIR = f"{PANGENOME_ROOT}/core_{PANAROO_CORE_THRESHOLD}"
 CUSTOM_OPTIONS = config.get("custom_alignment", {})
 CORE_SAMPLE_FILE = CUSTOM_OPTIONS.get("core_sample_list") or None
