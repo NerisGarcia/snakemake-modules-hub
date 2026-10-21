@@ -149,7 +149,6 @@ rule edit_gff_to_remove_gene:
         edited_gff=temp(f"{CORE_DIR}/edited/{{isolate}}.gff3")
     shell:
         r'''
-        mkdir -p $(dirname {output.edited_gff})
         sed 's/;gene=[^;]*//' {input.gff} > {output.edited_gff}
         '''
 
@@ -163,7 +162,6 @@ rule pangenome_gff_paths:
     shell:
         r'''
         out_dir=$(dirname {output})
-        mkdir -p "$out_dir"
         printf '%s\n' {input.edited_gffs} > {output}
         '''
 
@@ -320,7 +318,6 @@ rule amas_concatenate:
         "panaroo_env"
     shell:
         r'''
-        mkdir -p {AMAS_DIR}
         AMAS.py concat -i {input.alignments} -f fasta -d dna -t {output.alignment} -p {output.partitions}
         '''
 
@@ -337,7 +334,7 @@ rule summarize_custom_alignments:
         "panaroo_env"
     shell:
         r'''
-        mkdir -p {params.amas_dir}
+
         AMAS.py summary -i {input.alignments} -f fasta -d dna -s -o {output.summary}
 
         # AMAS writes one "<input>-seq-summary.txt" file per gene alignment,
