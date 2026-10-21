@@ -146,7 +146,7 @@ rule edit_gff_to_remove_gene:
     input:
         gff=ancient(f"{ANNOT_DIR}/{{isolate}}.gff3")
     output:
-        edited_gff=temp(f"{CORE_DIR}/edited/{{isolate}}.gff3")
+        edited_gff=f"{CORE_DIR}/edited/{{isolate}}.gff3"
     shell:
         r'''
         sed 's/;gene=[^;]*//' {input.gff} > {output.edited_gff}
@@ -290,7 +290,7 @@ rule mafft_per_gene:
     input:
         fasta=selected_gene_input
     output:
-        alignment=temp(f"{MAFFT_DIR}/{RUN_DIR_NAME}_{{gene}}.fasta")
+        alignment=f"{MAFFT_DIR}/{RUN_DIR_NAME}_{{gene}}.fasta"
     threads: config["threads"]
     conda:
         "panaroo_env"
