@@ -1,0 +1,387 @@
+
+#fastp output directory
+miniLen=55 ### 151x0.5
+
+# DATASET
+DATASET_NAME = config["dataset"]
+
+#SAMPLES
+SAMPLEFILE = config["samplefile"]
+SAMPLES = [line for line in open(SAMPLEFILE).read().splitlines() if line.strip() != ""]
+
+# DIRS
+RAW_DIR = config["raw_dir"]
+GRAL_OUT_DIR = config["out_dir"]
+
+FASTP_DIR = f'{GRAL_OUT_DIR}/01_fastp'
+CLEANIFIER_DIR = f'{GRAL_OUT_DIR}/02_cleanifier'
+KRAKEN_DIR = f'{GRAL_OUT_DIR}/03_kraken'
+VIRGO2_DIR = f'{GRAL_OUT_DIR}/04_virgo2'
+VALENCIA_DIR = f'{GRAL_OUT_DIR}/05_valencia'
+VISTA_DIR = f'{GRAL_OUT_DIR}/06_vista'
+
+
+# PARAMS
+# cleanifyer index for human removal
+CLEANIFIER_INDEX = config["cleanifyer_index"]
+
+#DBs
+KRAKEN_DB = config["kraken_db"]
+VLC_REF = config["speciateIT_valencia_ref"]
+VIRGOTAXA_TO_RENAME = config["virgotaxa_to_rename"]
+
+
+
+rule all:
+    input:
+        expand(f'{FASTP_DIR}/{sample}.unpaired.fastq.gz', sample=SAMPLES)
+
+
+
+# 1. rawreads
+# outout number of reads and columns tagging samples with low read number _____________________________________________________________
+
+
+# 2. quality_control fastp _____________________________________________________________
+
+rule fastp:
+    input:
+        r1 = f'{RAW_DIR}/{sample}.R1.fastq.gz',
+        r2 = f'{RAW_DIR}/{sample}.R2.fastq.gz',
+
+    output:
+        r1 = f'{FASTP_DIR}/{sample}.R1.fastq.gz',
+        r2 = f'{FASTP_DIR}/{sample}.R2.fastq.gz',
+        un1 = f'{FASTP_DIR}/{sample}.unpaired.R1.fastq.gz',
+        un2 = f'{FASTP_DIR}/{sample}.unpaired.R2.fastq.gz',
+        json = f'{FASTP_DIR}/{sample}_report.json'
+    params:
+        miniLen = miniLen,
+        sample = f'{FASTP_DIR}/{sample}'
+    threads:
+        config["fastp_threads"]
+    shell:
+        """
+        fastp \
+        -in1 {input.r1} -in2 {input.r2} \
+        -out1 {output.r1} -out2 {output.r2} \
+        --html {params.sample}_report.html --json {params.sample}_report.json \
+        -w {threads} \
+        --detect_adapter_for_pe \
+        --trim_poly_g \
+        --cut_right \
+        --length_required {params.miniLen} \
+        --cut_window_size 4 \
+        --cut_mean_quality 12 
+
+        """
+rule fastp_report:
+    input:
+        json = f'{FASTP_DIR}/{sample}_report.json'
+
+    output:
+        tsv = f'{FASTP_DIR}/{sample}_report.tsv'
+    shell:
+        """
+        python script/fastp-json2csv -i {input.json} -o {output.tsv} -d '\t'
+        """
+
+
+rule cat_fastq_unpaired:
+    input:
+        un1 = f'{FASTP_DIR}/{sample}.unpaired.R1.fastq.gz',
+        un2 = f'{FASTP_DIR}/{sample}.unpaired.R2.fastq.gz',
+
+    output:
+        un = f'{FASTP_DIR}/{sample}.unpaired.fastq.gz'
+
+    shell:
+        """
+        cat {input.un1} {input.un2} > {output.un}
+        rm {input.un1} {input.un2}
+        """
+
+
+# 3. human removal with cleanifyer ________________________________________________
+
+
+rule cleanifyer_paired:
+    input:
+        r1 = f'{FASTP_DIR}/{sample}.R1.fastq.gz'
+        r2 = f'{FASTP_DIR}/{sample}.R2.fastq.gz'
+
+    output:
+        r1_clean = f'{CLEANIFIER_DIR}/{sample}.R1.clean.fastq.gz'
+        r2_clean = f'{CLEANIFIER_DIR}/{sample}.R2.clean.fastq.gz'
+    params:
+        c_index = CLEANIFIER_INDEX
+    
+    threads:
+        config["cleanifier_threads"]
+
+    shell:
+        """
+        cleanifier filter --index {params.c_index} -T {threads} --compression gz --compression-threads {threads} --compression-level 9 --threshold 0.5 --fastq {input.r1} --pairs {input.r2} --out {output.r1_clean}
+
+        """
+
+rule cleanifyer_unpaired:
+    input:
+        un = f'{FASTP_DIR}/{sample}.unpaired.fastq.gz'
+
+    output:
+        un_clean = f'{CLEANIFIER_DIR}/{sample}.unpaired.clean.fastq.gz'
+    params:
+        c_index = CLEANIFIER_INDEX
+    
+    threads:
+        config["cleanifier_threads"]
+
+    shell:
+        """
+        cleanifier filter --index {params.c_index} -T {threads} --compression gz --compression-threads {threads} --compression-level 9 --threshold 0.5 --fastq {input.un} --out {output.un_clean}
+        """
+
+rule cleanifyer_analytics:
+    input:
+        r1_clean = f'{CLEANIFIER_DIR}/{sample}.R1.clean.fastq.gz'
+        r2_clean = f'{CLEANIFIER_DIR}/{sample}.R2.clean.fastq.gz'
+
+    output:
+        analytics_dir = f'{CLEANIFIER_DIR}/analytics/{sample}'
+
+    shell:
+        """
+        sequali {input.r1_clean} {input.r2_clean} --outdir {output.analytics_dir}
+        """
+
+rule cleanifyer_analytics_unpaired:
+    input:
+        un_clean = f'{CLEANIFIER_DIR}/{sample}.unpaired.clean.fastq.gz'
+
+    output:
+        analytics_dir = f'{CLEANIFIER_DIR}/analytics/{sample}'
+
+    shell:
+        """
+        sequali {input.un_clean} --outdir {output.analytics_dir}
+        """
+
+
+# run kraken _____________________________________________________________
+
+rule kraken2_paired:
+    input:
+        r1 = f'{CLEANIFIER_DIR}/{sample}.R1.clean.fastq.gz',
+        r2 = f'{CLEANIFIER_DIR}/{sample}.R2.clean.fastq.gz',
+
+    output:
+        r1_out = f'{KRAKEN_DIR}/{sample}_k2.out',
+        r1_report = f'{KRAKEN_DIR}/{sample}_k2profile.txt',
+        r1_unclassified = f'{KRAKEN_DIR}/{sample}_uncl#.fq.gz'
+    params:
+        kraken_db = config["kraken_db"]
+
+    threads:
+        config["kraken_threads"]
+
+    shell:
+        """
+        kraken2 --db {params.kraken_db} --threads {threads} --use-names --unclassified-out {output.r1_unclassified} --output {output.r1_out} --report {output.r1_report} --gzip-compressed --paired {input.r1} {input.r2}
+        """
+
+rule kraken2_unpaired:
+    input:
+        un = f'{CLEANIFIER_DIR}/{sample}.unpaired.clean.fastq.gz'
+
+    output:
+        un_out = f'{KRAKEN_DIR}/{sample}_k2_unp.out',
+        un_report = f'{KRAKEN_DIR}/{sample}_k2profile_unp.txt',
+        un_unclassified = f'{KRAKEN_DIR}/{sample}_uncl_unpaired.fq.gz'
+
+    threads:
+        config["kraken_threads"]
+    params:
+        kraken_db = config["kraken_db"]
+
+    shell:
+        """
+        kraken2 --db {params.kraken_db} {input.un} --threads {threads} --use-names --unclassified-out {output.un_unclassified} --output {output.un_out} --report {output.un_report} --gzip-compressed
+        """
+
+rule combine_kreports:
+    input:
+        r1_report = f'{KRAKEN_DIR}/{sample}_k2profile.txt',
+        un_report = f'{KRAKEN_DIR}/{sample}_k2profile_unp.txt'
+
+    output:
+        combined_report = f'{KRAKEN_DIR}/{sample}_combined_k2profile.txt'
+
+    shell:
+        """
+        combine_kreports.py -r {input.r1_report} {input.un_report} -o {output.combined_report}
+        """
+
+rule bracken:
+    input:
+        combined_report = f'{KRAKEN_DIR}/{sample}_combined_k2profile.txt'
+
+    output:
+        bracken = f'{KRAKEN_DIR}/{sample}_brackenSpec.txt'
+    threads:
+        config["kraken_threads"]
+    params:
+        kraken_db = config["kraken_db"]
+    shell:
+        """
+        bracken -i {input.combined_report} -o {output.bracken} -l S -d {params.kraken_db}
+        """
+
+
+# 4a. merge paired end for VIRGO2_____________________________________________________________
+rule se_for_virgo:
+    input:
+        r1 = f'{CLEANIFIER_DIR}/{sample}.R1.clean.fastq.gz',
+        r2 = f'{CLEANIFIER_DIR}/{sample}.R2.clean.fastq.gz',
+        un = f'{CLEANIFIER_DIR}/{sample}.unpaired.clean.fastq.gz'
+
+    output:
+        se = f'{CLEANIFIER_DIR}/{sample}.clean.se.fq.gz'
+
+    threads:
+        config["virgo2_threads"]
+
+    shell:
+        """
+        cat {input.r1} {input.r2} {input.un} > {output.se}
+        """
+
+# 4b. run VIRGO2 - mapping_____________________________________________________________
+
+rule virgo2_map:
+    input:
+        se = f'{CLEANIFIER_DIR}/{sample}.clean.se.fq.gz'
+
+    output:
+        out = f'{VIRGO_DIR}/01_map/{sample}.out',
+        directory = f'{VIRGO_DIR}/01_map/'
+
+    threads:
+        config["virgo2_threads"]
+    
+    params:
+        sample = f'{VIRGO_DIR}/01_map/{sample}'
+
+    shell:
+        """
+       python VIRGO2.py map --bypass 0 --reads {input.se} --threads {threads} --outputPrefix {params.sample}
+        """
+
+# 4c. run VIRGO2 - compile_____________________________________________________________
+
+rule virgo2_compile:
+    input:
+        v_dir = f'{VIRGO_DIR}/01_map'
+
+    output:
+         out = f'{VIRGO_DIR}/02_compile/{DATASET}.virgo2.summary.NR.txt.gz'
+
+    threads:
+        config["virgo2_threads"]
+
+    params:
+        sample =f'{VIRGO_DIR}/02_compile/{DATASET}'
+
+    shell:
+        """
+        python VIRGO2.py compile -i {input.v_dir} --outputPrefix {params.sample}
+        """
+
+# 4d. run VIRGO2 - taxonomy __________________________________________________________
+
+rule virgo2_taxonomy:
+    input:
+        in_comp = f'{VIRGO_DIR}/02_compile/{DATASET}.virgo2.summary.NR.txt.gz'
+
+    output:
+        out = f'{VIRGO_DIR}/03_taxonomy/{DATASET}.virgo2.taxonomy.txt.gz'
+
+    threads:
+        config["virgo2_threads"]
+
+    params:
+        sample = f'{VIRGO_DIR}/03_taxonomy/{DATASET}'
+
+    shell:
+        """
+        python VIRGO2.py taxonomy -i {input.in_comp} --outputPrefix {params.sample}
+        """
+
+
+# 5a. CST with Valencia_____________________________________________________________
+
+rule correc_virgo_taxa_names:
+    input:
+        in_virgo = f'{VIRGO_DIR}/03_taxonomy/{DATASET}.virgo2.readCount.csv'
+    output:
+        out = temp(f'{VIRGO_DIR}/03_taxonomy/{DATASET}.virgo2.readCount.taxacorrected.csv')
+
+    params:
+        taxa_names_to_change = VIRGOTAXA_TO_RENAME
+
+    shell:
+        """
+        python scripts/virgo2_correct_taxa_names.py \
+            -i {input.in_virgo} \
+            -o {output.out} \
+            -t {params.taxa_names_to_change}
+        """
+
+rule virgo2_add_read_count:
+    #A read_count column was added as required by VALENCIA:
+    input:
+        in_virgo = f'{VIRGO_DIR}/03_taxonomy/{DATASET}.virgo2.readCount.taxacorrected.csv'
+
+    output:
+        out = f'{VIRGO_DIR}/03_taxonomy/{DATASET}.virgo2.readCount.VLC.csv'
+
+    shell:
+        """
+        python scripts/virgo2_add_read_count.py \
+            -i {input.in_virgo} \
+            -o {output.out}
+        """
+
+rule valencia_cst:
+    input:
+        in_virgo =  f'{VIRGO_DIR}/03_taxonomy/{DATASET}.virgo2.readCount.VLC.csv'
+    output:
+        out = f'{VALENCIA_DIR}/{DATASET}_VALENCIA.csv'
+    params:
+        ref =  VLC_REF
+    shell:
+        """
+        python Valencia.py \
+            -ref {params.ref} \
+            -i {input.in_virgo} \
+            -o {output.out}
+   """
+
+
+# 6. mgCST with VISTA_____________________________________________________________
+
+rule vista_mgcst:
+    input:
+        in_virgo = f'{VIRGO_DIR}/02_compile/{DATASET}.virgo2.summary.NR.txt.gz'
+    output:
+        out = f'{VISTA_DIR}/norm_counts_genes_{DATE}.csv'
+    params:
+        vista_data = VISTA_DIR
+    shell:
+        """
+        Rscript run_VISTA.R {input.in_virgo} {params.vista_data}
+        """
+
+
+
+

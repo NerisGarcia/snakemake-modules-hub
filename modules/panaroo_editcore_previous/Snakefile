@@ -1,0 +1,296 @@
+import os
+
+
+def read_unique_sample_list(path, label):
+    with open(path) as handle:
+        samples = [
+            line.strip()
+            for line in handle
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+    if not samples:
+        raise ValueError(f"{label} is empty: {path}")
+    if len(samples) != len(set(samples)):
+        raise ValueError(f"{label} contains duplicate sample IDs: {path}")
+    return samples
+
+
+DATASET_NAME = config["dataset_name"]
+RESULTS_DIR = config["genomics_results_dir"]
+PANAROO_OPTIONS = config["panaroo"]
+EXISTING_PANAROO_DIR = PANAROO_OPTIONS.get("existing_pangenome_dir")
+if not EXISTING_PANAROO_DIR:
+    raise ValueError(
+        "panaroo.existing_pangenome_dir is required; this module never runs Panaroo"
+    )
+PANAROO_DIR = os.path.normpath(EXISTING_PANAROO_DIR)
+PANAROO_CORE_THRESHOLD = PANAROO_OPTIONS.get("core_threshold", 0.9)
+CUSTOM_OPTIONS = config.get("custom_alignment", {})
+
+SAMPLE_FILE = config["sample_list"]
+SAMPLES = read_unique_sample_list(SAMPLE_FILE, "sample_list")
+CORE_SAMPLE_FILE = CUSTOM_OPTIONS.get("core_sample_list") or None
+ANALYSIS_SAMPLE_FILE = CUSTOM_OPTIONS.get("analysis_sample_list") or None
+CORE_SAMPLES = (
+    read_unique_sample_list(CORE_SAMPLE_FILE, "core_sample_list")
+    if CORE_SAMPLE_FILE
+    else []
+)
+ANALYSIS_SAMPLES = (
+    read_unique_sample_list(ANALYSIS_SAMPLE_FILE, "analysis_sample_list")
+    if ANALYSIS_SAMPLE_FILE
+    else []
+)
+
+for label, selected_samples in (
+    ("core_sample_list", CORE_SAMPLES),
+    ("analysis_sample_list", ANALYSIS_SAMPLES),
+):
+    outside_dataset = sorted(set(selected_samples) - set(SAMPLES))
+    if outside_dataset:
+        raise ValueError(
+            f"{label} contains samples not in sample_list: "
+            + ", ".join(outside_dataset)
+        )
+
+CUSTOM_SELECTION = bool(CORE_SAMPLE_FILE or ANALYSIS_SAMPLE_FILE)
+REALIGN_AND_CLEAN = CUSTOM_OPTIONS.get("realign_and_clean", False)
+if REALIGN_AND_CLEAN and not CUSTOM_SELECTION:
+    raise ValueError("realign_and_clean requires a core_sample_list or analysis_sample_list")
+
+CORE_SAMPLES_FILE = CORE_SAMPLE_FILE or ANALYSIS_SAMPLE_FILE or SAMPLE_FILE
+ANALYSIS_SAMPLES_FILE = ANALYSIS_SAMPLE_FILE or SAMPLE_FILE
+CORE_THRESHOLD = CUSTOM_OPTIONS.get("core_threshold", PANAROO_CORE_THRESHOLD)
+
+RUN_NAME_PARTS = []
+if CORE_SAMPLE_FILE:
+    RUN_NAME_PARTS.extend(("core", CUSTOM_OPTIONS.get("core_name") or "custom"))
+if ANALYSIS_SAMPLE_FILE:
+    RUN_NAME_PARTS.extend(("subsample", CUSTOM_OPTIONS.get("subsample_name") or "custom"))
+RUN_DIR_NAME = (
+    "_".join((*RUN_NAME_PARTS, str(CORE_THRESHOLD)))
+    if RUN_NAME_PARTS
+    else f"core_{PANAROO_CORE_THRESHOLD}"
+)
+
+PANGENOME_ROOT = f"{RESULTS_DIR}/04_pangenome_editcore_previous/{DATASET_NAME}"
+RUN_DIR = f"{PANGENOME_ROOT}/{RUN_DIR_NAME}"
+RUN_LABEL = f"{DATASET_NAME}.{RUN_DIR_NAME}"
+VALIDATION_MARKER = f"{PANGENOME_ROOT}/.panaroo_results_validated"
+
+PANAROO_GENE_SEQUENCES = f"{PANAROO_DIR}/aligned_gene_sequences"
+PANAROO_ROARY = f"{PANAROO_DIR}/gene_presence_absence_roary.csv"
+PANAROO_RTAB = f"{PANAROO_DIR}/gene_presence_absence.Rtab"
+PANAROO_COMBINED_CDS = f"{PANAROO_DIR}/combined_DNA_CDS.fasta"
+PANAROO_CORE_ALIGNMENT = f"{PANAROO_DIR}/core_gene_alignment.aln"
+PANAROO_FILTERED_ALIGNMENT = f"{PANAROO_DIR}/core_gene_alignment_filtered.aln"
+
+FILTERED_ROARY = f"{RUN_DIR}/gene_presence_absence.selected_samples.csv"
+SELECTED_CORE_GROUPS = f"{RUN_DIR}/selected_core_groups.tsv"
+SELECTED_GENE_FASTAS = f"{RUN_DIR}/selected_gene_fastas"
+MAFFT_DIR = f"{RUN_DIR}/mafft"
+FINAL_GENE_ALIGNMENTS = f"{RUN_DIR}/gene_alignments"
+CUSTOM_ALIGNMENT = f"{RUN_DIR}/{RUN_LABEL}.gene_alignment.aln"
+AMAS_DIR = f"{RUN_DIR}/amas"
+PARTITIONS_FILE = f"{AMAS_DIR}/{RUN_LABEL}.partitions.txt"
+SUMMARY_FILE = f"{AMAS_DIR}/amas_alignment_summary.tsv"
+SAMPLE_SELECTION_LOG = f"{RUN_DIR}/sample_selection.tsv"
+
+TREE_ALIGNMENT = CUSTOM_ALIGNMENT if REALIGN_AND_CLEAN else PANAROO_FILTERED_ALIGNMENT
+TREE_PREFIX = f"{RUN_DIR}/iqtree/{RUN_LABEL}.gene_alignment"
+TREE_TARGETS = [f"{TREE_PREFIX}.treefile"]
+CUSTOM_TARGETS = (
+    [FILTERED_ROARY, SELECTED_CORE_GROUPS, SAMPLE_SELECTION_LOG]
+    if CUSTOM_SELECTION
+    else []
+)
+CUSTOM_ALIGNMENT_TARGETS = (
+    [CUSTOM_ALIGNMENT, PARTITIONS_FILE]
+    if REALIGN_AND_CLEAN
+    else []
+)
+SUMMARY_TARGETS = (
+    [SUMMARY_FILE]
+    if REALIGN_AND_CLEAN and CUSTOM_OPTIONS.get("include_amas_summary", False)
+    else []
+)
+
+
+rule all:
+    input:
+        VALIDATION_MARKER,
+        *CUSTOM_TARGETS,
+        *CUSTOM_ALIGNMENT_TARGETS,
+        *SUMMARY_TARGETS,
+        *TREE_TARGETS
+
+
+rule validate_existing_panaroo:
+    input:
+        rtab=PANAROO_RTAB,
+        roary=PANAROO_ROARY,
+        combined_cds=PANAROO_COMBINED_CDS,
+        core_alignment=PANAROO_CORE_ALIGNMENT,
+        filtered_alignment=PANAROO_FILTERED_ALIGNMENT,
+        gene_sequences=directory(PANAROO_GENE_SEQUENCES),
+    output:
+        VALIDATION_MARKER
+    shell:
+        r"""
+        test -s "{input.rtab}" || {{ echo "Missing or empty Panaroo result: {input.rtab}" >&2; exit 1; }}
+        test -s "{input.roary}" || {{ echo "Missing or empty Panaroo result: {input.roary}" >&2; exit 1; }}
+        test -s "{input.combined_cds}" || {{ echo "Missing or empty Panaroo result: {input.combined_cds}" >&2; exit 1; }}
+        test -s "{input.core_alignment}" || {{ echo "Missing or empty Panaroo result: {input.core_alignment}" >&2; exit 1; }}
+        test -s "{input.filtered_alignment}" || {{ echo "Missing or empty Panaroo result: {input.filtered_alignment}" >&2; exit 1; }}
+        test -d "{input.gene_sequences}" || {{ echo "Missing Panaroo directory: {input.gene_sequences}" >&2; exit 1; }}
+        mkdir -p "$(dirname "{output}")"
+        printf 'Validated source Panaroo directory: %s\n' "{PANAROO_DIR}" > "{output}"
+        """
+
+
+checkpoint select_custom_core_groups:
+    input:
+        validation=VALIDATION_MARKER,
+        roary=PANAROO_ROARY,
+        gene_sequence_dir=PANAROO_GENE_SEQUENCES,
+        core_samples=CORE_SAMPLES_FILE,
+        analysis_samples=ANALYSIS_SAMPLES_FILE,
+        all_samples=SAMPLE_FILE
+    output:
+        filtered_roary=FILTERED_ROARY,
+        core_groups=SELECTED_CORE_GROUPS,
+        sample_log=SAMPLE_SELECTION_LOG,
+        gene_fastas=directory(SELECTED_GENE_FASTAS)
+    params:
+        core_threshold=CORE_THRESHOLD,
+        file_prefix=RUN_DIR_NAME
+    script:
+        "../panaroo_editcore/select_core_groups.py"
+
+
+def selected_gene_ids(wildcards):
+    checkpoint_job = checkpoints.select_custom_core_groups.get()
+    pattern = os.path.join(
+        str(checkpoint_job.output.gene_fastas),
+        f"{RUN_DIR_NAME}_{{gene}}.fasta",
+    )
+    genes = glob_wildcards(pattern).gene
+    if not genes:
+        raise WorkflowError("No selected core gene families have usable sequences")
+    return genes
+
+
+def selected_gene_input(wildcards):
+    gene_fastas = checkpoints.select_custom_core_groups.get().output.gene_fastas
+    fasta_path = os.path.join(
+        gene_fastas, f"{RUN_DIR_NAME}_{wildcards.gene}.fasta"
+    )
+    if not os.path.isfile(fasta_path):
+        raise WorkflowError(
+            f"Selected-gene FASTA was not emitted by the checkpoint: {fasta_path}"
+        )
+    return fasta_path
+
+
+def final_gene_alignments(wildcards):
+    return expand(
+        f"{FINAL_GENE_ALIGNMENTS}/{RUN_DIR_NAME}_{{gene}}.fasta",
+        gene=selected_gene_ids(wildcards),
+    )
+
+
+rule mafft_per_gene:
+    input:
+        fasta=selected_gene_input
+    output:
+        alignment=f"{MAFFT_DIR}/{RUN_DIR_NAME}_{{gene}}.fasta"
+    threads: config["threads"]
+    conda:
+        "panaroo_editcore_env.yaml"
+    shell:
+        "mafft --adjustdirection --auto --thread {threads} {input.fasta} > {output.alignment}"
+
+
+rule prepare_gene_alignment:
+    input:
+        alignment=f"{MAFFT_DIR}/{RUN_DIR_NAME}_{{gene}}.fasta",
+        samples=ANALYSIS_SAMPLES_FILE
+    output:
+        alignment=f"{FINAL_GENE_ALIGNMENTS}/{RUN_DIR_NAME}_{{gene}}.fasta"
+    script:
+        "../panaroo_editcore/prepare_gene_alignment.py"
+
+
+rule amas_concatenate:
+    input:
+        alignments=final_gene_alignments
+    output:
+        alignment=CUSTOM_ALIGNMENT,
+        partitions=PARTITIONS_FILE
+    conda:
+        "panaroo_editcore_env.yaml"
+    shell:
+        "AMAS.py concat -i {input.alignments} -f fasta -d dna -t {output.alignment} -p {output.partitions}"
+
+
+rule summarize_custom_alignments:
+    input:
+        alignments=final_gene_alignments
+    output:
+        summary=SUMMARY_FILE
+    params:
+        gene_dir=FINAL_GENE_ALIGNMENTS,
+        amas_dir=AMAS_DIR
+    conda:
+        "panaroo_editcore_env.yaml"
+    shell:
+        r"""
+        mkdir -p "{params.amas_dir}"
+        AMAS.py summary -i {input.alignments} -f fasta -d dna -s -o {output.summary}
+        shopt -s nullglob
+        for seq_summary in "{params.gene_dir}"/*-seq-summary.txt; do
+            mv "$seq_summary" "{params.amas_dir}/"
+        done
+        """
+
+
+rule prepare_tree:
+    input:
+        validation=VALIDATION_MARKER,
+        alignment=TREE_ALIGNMENT
+    output:
+        vcf=f"{TREE_PREFIX}.vcf",
+        dist=f"{TREE_PREFIX}.fasta.DM",
+        snp_fasta=f"{TREE_PREFIX}.SNPs.fasta",
+        fconts_file=f"{TREE_PREFIX}.fconst.txt"
+    conda:
+        "panaroo_editcore_env.yaml"
+    threads: config["threads"]
+    shell:
+        r"""
+        snp-sites -v {input.alignment} > {output.vcf}
+        snp-dists -j {threads} -m {input.alignment} > {output.dist}
+        snp-sites -o {output.snp_fasta} {input.alignment}
+        snp-sites -C {input.alignment} > {output.fconts_file}
+        """
+
+
+rule iqtree_tree:
+    input:
+        snp_fasta=f"{TREE_PREFIX}.SNPs.fasta",
+        fconts_file=f"{TREE_PREFIX}.fconst.txt"
+    output:
+        tree_file=f"{TREE_PREFIX}.treefile"
+    conda:
+        "panaroo_editcore_env.yaml"
+    params:
+        model=config["iqtree"]["model"],
+        bootstrap=config["iqtree"]["bootstrap"],
+        threads=config["threads"],
+        prefix=TREE_PREFIX
+    shell:
+        r"""
+        fconstsvar=$(cat "{input.fconts_file}")
+        iqtree -s "{input.snp_fasta}" -m "{params.model}" -B "{params.bootstrap}" \
+            -nt "{params.threads}" --redo -fconst "$fconstsvar" --prefix "{params.prefix}"
+        """

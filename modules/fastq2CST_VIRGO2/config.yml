@@ -1,0 +1,24 @@
+#File with samples names to do
+sample_file: samples.csv
+
+dataset_name: my_dataset
+
+# input directories
+raw_dir: /path/to/raw_fastq
+
+# output dir where you want to store results
+out_dir: /path/to/output
+
+#necessary virgo info
+virgotaxa_to_rename: taxanames_to_change.csv
+
+# necessary databases and references
+cleanifyer_index: /local/groupshare/ravel/mfrance/human_removal/cleanifier_PB/t2t_pangenome_hla_variants_cdna_cleanifier_index_k29_w33
+kraken_db: /local/groupshare/ravel/mfrance/software/kraken2/database/
+speciateIT_valencia_ref: VALENCIA2_CST_centroids_19Aug2024.csv
+
+# threads 
+fastp_threads: 8
+cleanifyer_threads: 8
+kraken_threads: 16
+virgo2_threads: 16

@@ -37,3 +37,18 @@ rsync -avhP \
   --exclude='*' \
   /Users/ngarcia-gonzalez/Desktop/RESEARCH/Projects/01_PTB_GWAS/data/0_input_data/3_Annotation/ \
   ngarcia-gonzalez@ravellab.igs.umaryland.edu:/local/scratch/neris/01_PTB_GWAS/data/3_Annotation/
+
+
+
+  rsync -avhP  ngarcia-gonzalez@ravellab.igs.umaryland.edu:/local/projects-t3/PGATES/Nova2/01.RawData/Pilar_2* data/test/metagenomics/VIRGO2/raw_data/
+
+
+
+
+
+
+conda create -n virgo2_env
+
+conda activate virgo2_env
+
+conda install -c bioconda fastp

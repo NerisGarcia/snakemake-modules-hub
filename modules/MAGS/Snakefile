@@ -1,0 +1,254 @@
+FASTQ_DIR = config['fastq_dir']
+
+OUT_DIR = config['out_dir']
+
+ASSEMBLY_DIR = f'{OUT_DIR}/MAGS/01_assembly'
+METABAT_DIR = f'{OUT_DIR}/MAGS/05_binning/MetaBat'
+MAXBIN_DIR = f'{OUT_DIR}/MAGS/05_binning/MaxBin'
+COMEBIN_DIR = f'{OUT_DIR}/MAGS/05_binning/ComeBin'
+
+
+# assembly 
+
+rule assembly:
+    input:
+        r1 = f'{FASTQ_DIR}/{sample}.R1.clean.fastq.gz',
+        r2 = f'{FASTQ_DIR}/{sample}.R2.clean.fastq.gz',
+        un = f'{FASTQ_DIR}/{sample}.unpaired.fastq.gz'
+    output:
+        outdir = f'{ASSEMBLY_DIR}/{sample}/{sample}.contigs.fa'
+    threads: 
+        threads = config['spades_threads'],
+    params:
+        memorylimit = config['spades_memory_limit']
+    shell:
+        """
+        spades.py --meta -o {output.outdir} -1 {input.r1} -2 {input.r2} -s {input.un} -t {threads.threads} -m {params.memorylimit}
+        """
+
+rule clean_assembly_dir:
+    input:
+        outdir = f'{ASSEMBLY_DIR}/{sample}/{sample}.contigs.fa'
+    params:
+        sample = sample
+    shell:
+        """
+            rm -r ${params.sample}/${params.sample}.corrected
+
+        """
+
+
+#metabat
+
+rule bowtie_build_contigs:
+    input:
+        contigs = f'{ASSEMBLY_DIR}/{sample}/{sample}.contigs.fa'
+    output:
+        index = temp(f'{METABAT_DIR}/{sample}/{sample}.contigs.fa.bwt')
+    shell:
+        """
+        bowtie2-build {input.contigs} {output.index}
+        """
+    
+
+rule metabat_map_reads2contigs:
+    input:
+        r1 = f'{FASTQ_DIR}/{sample}.R1.clean.fastq.gz',
+        r2 = f'{FASTQ_DIR}/{sample}.R2.clean.fastq.gz',
+        un = f'{FASTQ_DIR}/{sample}.unpaired.fastq.gz',
+        contigs = f'{ASSEMBLY_DIR}/{sample}/{sample}.contigs.fa',
+        index = f'{METABAT_DIR}/{sample}/{sample}.contigs.fa.bwt'
+    output:
+        sam = temp(f'{METABAT_DIR}/{sample}/{sample}.sam')
+    threads:
+        threads = config['metabat_threads'],
+    shell:
+        """
+        bowtie2 --threads {threads.threads} -x {input.index} -1 {input.r1} -2 {input.r2} -U {input.un} -S {output.sam}
+        """
+
+#rule samtools_filter:
+#    input:
+#        sam = f'{METABAT_DIR}/{sample}/{sample}.sam'
+#    output:
+#        filt_sam = f'{METABAT_DIR}/{sample}/{sample}.filt.sam'
+#    shell:
+#        """
+#        samtools view -f 0x2 {input.sam} > {output.filt_sam}
+#        """
+
+#rule samtools_faidx:
+#    input:
+#        sam = f'{METABAT_DIR}/{sample}/{sample}.sam'
+#    output:
+#        fai = f'{METABAT_DIR}/{sample}/{sample}.sam.fai'
+#    shell:
+#        """
+#        samtools faidx {input.sam}
+#        """
+
+rule samtools_sam2bam:
+    input:
+        sam = f'{METABAT_DIR}/{sample}/{sample}.sam',
+        fai = f'{METABAT_DIR}/{sample}/{sample}.sam.fai'
+    output:
+        bam = temp(f'{METABAT_DIR}/{sample}/{sample}.bam')
+    shell:
+        """
+        samtools view -bt {input.fai} {input.sam} > {output.bam}
+        """
+
+rule samtools_sort_bam:
+    input:
+        bam = f'{METABAT_DIR}/{sample}/{sample}.bam'
+    output:
+        sorted_bam = f'{METABAT_DIR}/{sample}/{sample}_s.bam',
+        temp = f'{METABAT_DIR}/{sample}/{sample}-TEMP'
+    shell:
+        """
+        samtools sort -o {output.sorted_bam} -T {output.temp} {input.bam}
+        """
+
+rule samtools_index_bam:
+    input:
+        sorted_bam = f'{METABAT_DIR}/{sample}/{sample}_s.bam'
+    output:
+        bai = f'{METABAT_DIR}/{sample}/{sample}_s.bam.bai'
+    shell:
+        """
+        samtools index {input.sorted_bam}
+        """
+
+
+#rule samtools_cleanup:
+
+
+rule jgi_summarize_bam_contig_depths:
+    input:
+        bam = f'{METABAT_DIR}/{sample}/{sample}_s.bam'
+    output:
+        depth = f'{METABAT_DIR}/{sample}/{sample}.depth'
+    shell:
+        """
+        /usr/local/packages/metabat/jgi_summarize_bam_contig_depths --outputDepth {output.depth} {input.bam}
+        """
+
+rule metabat2:
+    input:
+        contig = f'{ASSEMBLY_DIR}/{sample}/{sample}.contigs.fa',
+        depth = f'{METABAT_DIR}/{sample}/{sample}.depth'
+    output:
+        bins_dir = f'{BIN_DIR}/{sample}'
+    threads:
+        threads = config['metabat_threads']
+    shell:
+        """
+        mkdir -p {output.bins_dir}
+        /usr/local/packages/metabat/metabat2 -t {threads.threads} -m 1500 --maxEdges 500 --seed 343 -i {input.contig} -a {input.depth} -o {output.bins_dir}/{sample}.metaBAT.bin
+        """
+
+
+seq_dir=/local/scratch/mfrance/Pilar/02_human/
+output_dir=/local/scratch/mfrance/Pilar/05_binning/MetaBat
+contig_dir=/local/scratch/mfrance/Pilar/04_assembly/assembled_contigs
+bin_dir=/local/scratch/mfrance/Pilar/05_binning/MetaBat
+
+
+/usr/local/packages/samtools-1.20/bin/samtools view -f 0x2 $output_dir/${infile}.sam > $output_dir/${infile}.filt.sam
+/usr/local/packages/samtools-1.20/bin/samtools faidx $output_dir/${infile}.sam
+/usr/local/packages/samtools-1.20/bin/samtools view -bt $output_dir/${infile}.sam.fai $output_dir/${infile}.sam > $output_dir/${infile}.bam
+/usr/local/packages/samtools-1.20/bin/samtools sort -o $output_dir/${infile}_s.bam -T $output_dir/${infile}-TEMP $output_dir/${infile}.bam
+/usr/local/packages/samtools-1.20/bin/samtools index $output_dir/${infile}_s.bam
+
+mv $output_dir/${infile}_s.bam $output_dir/${infile}.bam
+
+/usr/local/packages/metabat/jgi_summarize_bam_contig_depths --outputDepth $output_dir/${infile}.depth $output_dir/${infile}.bam
+
+mkdir -p $bin_dir/${infile}
+
+/usr/local/packages/metabat/metabat2 -t 4 -m 1500 --maxEdges 500  --seed 343 -i $contig_dir/${infile}.contigs.fasta -a $output_dir/${infile}.depth -o ${infile}/${infile}.metaBAT.bin
+
+rm ${infile}*.txt
+rm ${infile}*.bt2
+rm ${infile}.filt.sam ${infile}*.bam ${infile}*.bai ${infile}.sam
+
+
+
+#maxbin
+
+
+
+seq_dir=/local/scratch/mfrance/Pilar/02_human
+
+contig_dir=/local/scratch/mfrance/Pilar/04_assembly/assembled_contigs
+bin_dir=/local/scratch/mfrance/Pilar/05_binning/MaxBin
+
+sleep $((RANDOM % 100))
+
+/local/groupshare/ravel/mfrance/software/MaxBin-2.2.7/run_MaxBin.pl -min_contig_length 500 -thread 4 -contig $contig_dir/${infile}.contigs.fasta -reads $seq_dir/${infile}.R1.fq.gz -reads2 $seq_dir/${infile}.R1.fq.gz -reads3 $seq_dir/${infile}.unpaired.fq.gz -out $infile
+
+mkdir -p $bin_dir/$infile
+
+for bin in ${infile}*.fasta; do num=$(echo $bin | cut -d"." -f2); mv $bin $bin_dir/$infile/${infile}.MaxBin.bin${num}.fa; done
+
+rm ${infile}.*
+
+#comebin
+
+
+
+seq_dir=/local/scratch/mfrance/Pilar/02_human/
+output_dir=/local/scratch/mfrance/Pilar/05_binning/ComeBin
+contig_dir=/local/scratch/mfrance/Pilar/04_assembly/assembled_contigs
+bin_dir=/local/scratch/mfrance/Pilar/05_binning/ComeBin
+
+mkdir $output_dir/${infile}
+bowtie2-build $contig_dir/${infile}.contigs.fasta $output_dir/${infile}
+bowtie2 -x $output_dir/${infile} -1 $seq_dir/${infile}.R1.fq.gz -2 $seq_dir/${infile}.R2.fq.gz -U $seq_dir/${infile}.unpaired.fq.gz -S $output_dir/${infile}.sam
+
+/usr/local/packages/samtools-1.20/bin/samtools faidx $output_dir/${infile}.sam
+/usr/local/packages/samtools-1.20/bin/samtools view -bt $output_dir/${infile}.sam.fai $output_dir/${infile}.sam > $output_dir/${infile}.bam
+/usr/local/packages/samtools-1.20/bin/samtools sort -o $output_dir/${infile}_s.bam -T $output_dir/${infile}-TEMP $output_dir/${infile}.bam
+/usr/local/packages/samtools-1.20/bin/samtools index $output_dir/${infile}_s.bam
+
+mv $output_dir/${infile}_s.bam $output_dir/${infile}.bam
+
+mkdir $output_dir/${infile}/bamFiles/
+mv $output_dir/${infile}.bam $output_dir/${infile}/bamFiles/
+
+conda init
+source activate base
+conda activate /local/groupshare/ravel/ichaudry/software/comebin_env/
+
+run_comebin.sh -t 8 -b 250 -a $contig_dir/${infile}.contigs.fasta -p $output_dir/${infile}/bamFiles -o ${output_dir}/${infile}/
+
+i=1
+for bin in ${output_dir}/${infile}/comebin_res/comebin_res_bins/*.fa; do mv $bin ${output_dir}/${infile}/${infile}.ComeBin.bin.${i}.fasta; i=$((i+1)); done
+
+rm ${infile}*.txt
+rm ${infile}*.bt2
+rm  $output_dir/${infile}/bamFiles/*.bam ${infile}*.bam ${infile}*.bai ${infile}.sam
+
+
+#metawrap
+
+
+MBbins=/local/scratch/mfrance/Pilar/05_binning/MetaBat
+CBbins=/local/scratch/mfrance/Pilar/05_binning/ComeBin
+MXbins=/local/scratch/mfrance/Pilar/05_binning/MaxBin
+
+#metawrap bin_refinement -o ${infile} -t 4 -m 64 -c 70 -x 10 -A $MBbins/${infile} -B $CBbins/${infile} -C $MXbins/${infile}
+
+#metawrap bin_refinement -o ${infile} -t 4 -m 64 -c 70 -x 10 -A $MBbins/${infile} -B $CBbins/${infile}
+
+metawrap bin_refinement -o ${infile} -t 4 -m 64 -c 70 -x 10 -A $MBbins/${infile} -B $MXbins/${infile}
+
+
+# taxonomy
+module unload python
+module load gtdb-tk/2.1.1
+
+export GTDBTK_DATA_PATH=/local/groupshare/ravel/mfrance/software/gtdbtk/release207_v2/
+
+
+gtdbtk classify_wf --cpus 8 -x .fa --genome_dir /local/scratch/mfrance/Pilar/06_taxonomy/MAGs --out_dir /local/scratch/mfrance/Pilar/06_taxonomy/
