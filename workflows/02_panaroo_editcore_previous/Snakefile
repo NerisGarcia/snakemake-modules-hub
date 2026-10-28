@@ -73,7 +73,7 @@ RUN_DIR_NAME = (
     else f"core_{PANAROO_CORE_THRESHOLD}"
 )
 
-PANGENOME_ROOT = f"{RESULTS_DIR}/04_pangenome_editcore_previous/{DATASET_NAME}"
+PANGENOME_ROOT = f"{RESULTS_DIR}/04_pangenome/{DATASET_NAME}"
 RUN_DIR = f"{PANGENOME_ROOT}/{RUN_DIR_NAME}"
 RUN_LABEL = f"{DATASET_NAME}.{RUN_DIR_NAME}"
 VALIDATION_MARKER = f"{PANGENOME_ROOT}/.panaroo_results_validated"
@@ -95,6 +95,8 @@ AMAS_DIR = f"{RUN_DIR}/amas"
 PARTITIONS_FILE = f"{AMAS_DIR}/{RUN_LABEL}.partitions.txt"
 SUMMARY_FILE = f"{AMAS_DIR}/amas_alignment_summary.tsv"
 SAMPLE_SELECTION_LOG = f"{RUN_DIR}/sample_selection.tsv"
+
+PANGENOME_SUMMARY = f"{RUN_DIR}/{RUN_LABEL}.pangenome_summary.tsv"
 
 TREE_ALIGNMENT = CUSTOM_ALIGNMENT if REALIGN_AND_CLEAN else PANAROO_FILTERED_ALIGNMENT
 TREE_PREFIX = f"{RUN_DIR}/iqtree/{RUN_LABEL}.gene_alignment"
@@ -122,7 +124,8 @@ rule all:
         *CUSTOM_TARGETS,
         *CUSTOM_ALIGNMENT_TARGETS,
         *SUMMARY_TARGETS,
-        *TREE_TARGETS
+        *TREE_TARGETS,
+        PANGENOME_SUMMARY
 
 
 rule validate_existing_panaroo:
@@ -296,3 +299,17 @@ rule iqtree_tree:
         iqtree -s "{input.snp_fasta}" -m "{params.model}" -B "{params.bootstrap}" \
             -nt "{params.threads}" --redo -fconst "$fconstsvar" --prefix "{params.prefix}"
         """
+
+
+rule pangenome_summary:
+    input:
+        rtab=PANAROO_RTAB,
+        alignment=TREE_ALIGNMENT,
+        core_groups=SELECTED_CORE_GROUPS if CUSTOM_SELECTION else []
+    output:
+        summary=PANGENOME_SUMMARY
+    params:
+        core_threshold=CORE_THRESHOLD,
+        analysis_samples=len(ANALYSIS_SAMPLES) if ANALYSIS_SAMPLES else len(SAMPLES)
+    script:
+        "scripts/pangenome_summary.py"

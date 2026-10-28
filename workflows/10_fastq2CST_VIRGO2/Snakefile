@@ -1,12 +1,13 @@
 
 #fastp output directory
-miniLen=55 ### 151x0.5
+miniLen = config["fastp_min_length"]
 
 # DATASET
-DATASET_NAME = config["dataset"]
+DATASET_NAME = config["dataset_name"]
+DATASET = DATASET_NAME
 
-#SAMPLES
-SAMPLEFILE = config["samplefile"]
+# SAMPLES
+SAMPLEFILE = config["sample_file"]
 SAMPLES = [line for line in open(SAMPLEFILE).read().splitlines() if line.strip() != ""]
 
 # DIRS
@@ -17,6 +18,7 @@ FASTP_DIR = f'{GRAL_OUT_DIR}/01_fastp'
 CLEANIFIER_DIR = f'{GRAL_OUT_DIR}/02_cleanifier'
 KRAKEN_DIR = f'{GRAL_OUT_DIR}/03_kraken'
 VIRGO2_DIR = f'{GRAL_OUT_DIR}/04_virgo2'
+VIRGO_DIR = VIRGO2_DIR
 VALENCIA_DIR = f'{GRAL_OUT_DIR}/05_valencia'
 VISTA_DIR = f'{GRAL_OUT_DIR}/06_vista'
 
@@ -34,7 +36,7 @@ VIRGOTAXA_TO_RENAME = config["virgotaxa_to_rename"]
 
 rule all:
     input:
-        expand(f'{FASTP_DIR}/{sample}.unpaired.fastq.gz', sample=SAMPLES)
+        expand(f'{FASTP_DIR}/{{sample}}_report.json', sample=SAMPLES)
 
 
 
@@ -46,26 +48,30 @@ rule all:
 
 rule fastp:
     input:
-        r1 = f'{RAW_DIR}/{sample}.R1.fastq.gz',
-        r2 = f'{RAW_DIR}/{sample}.R2.fastq.gz',
+        r1 = f'{RAW_DIR}/{{sample}}.R1.fq.gz',
+        r2 = f'{RAW_DIR}/{{sample}}.R2.fq.gz',
 
     output:
-        r1 = f'{FASTP_DIR}/{sample}.R1.fastq.gz',
-        r2 = f'{FASTP_DIR}/{sample}.R2.fastq.gz',
-        un1 = f'{FASTP_DIR}/{sample}.unpaired.R1.fastq.gz',
-        un2 = f'{FASTP_DIR}/{sample}.unpaired.R2.fastq.gz',
-        json = f'{FASTP_DIR}/{sample}_report.json'
+        r1 = f'{FASTP_DIR}/{{sample}}.fastp.R1.fq.gz',
+        r2 = f'{FASTP_DIR}/{{sample}}.fastp.R2.fq.gz',
+        un1 = f'{FASTP_DIR}/{{sample}}.fastp.unpaired.R1.fq.gz',
+        un2 = f'{FASTP_DIR}/{{sample}}.fastp.unpaired.R2.fq.gz',
+        json = f'{FASTP_DIR}/{{sample}}_report.json',
+        html = f'{FASTP_DIR}/{{sample}}_report.html'
     params:
         miniLen = miniLen,
-        sample = f'{FASTP_DIR}/{sample}'
+        sample = f'{FASTP_DIR}/{{sample}}'
     threads:
         config["fastp_threads"]
+    conda:
+        "virgo2_env"
     shell:
         """
         fastp \
-        -in1 {input.r1} -in2 {input.r2} \
-        -out1 {output.r1} -out2 {output.r2} \
-        --html {params.sample}_report.html --json {params.sample}_report.json \
+        --in1 {input.r1} --in2 {input.r2} \
+        --out1 {output.r1} --out2 {output.r2} \
+         --unpaired1 {output.un1} --unpaired2 {output.un2} \
+        --html {output.html} --json {output.json} \
         -w {threads} \
         --detect_adapter_for_pe \
         --trim_poly_g \
@@ -73,27 +79,27 @@ rule fastp:
         --length_required {params.miniLen} \
         --cut_window_size 4 \
         --cut_mean_quality 12 
-
         """
+
 rule fastp_report:
     input:
-        json = f'{FASTP_DIR}/{sample}_report.json'
+        json = f'{FASTP_DIR}/{{sample}}_report.json'
 
     output:
-        tsv = f'{FASTP_DIR}/{sample}_report.tsv'
+        tsv = f'{FASTP_DIR}/{{sample}}_report.tsv'
     shell:
         """
-        python script/fastp-json2csv -i {input.json} -o {output.tsv} -d '\t'
+        python scripts/fastp-json2csv.py {input.json} -o {output.tsv} -d '\\t'
         """
 
 
 rule cat_fastq_unpaired:
     input:
-        un1 = f'{FASTP_DIR}/{sample}.unpaired.R1.fastq.gz',
-        un2 = f'{FASTP_DIR}/{sample}.unpaired.R2.fastq.gz',
+        un1 = f'{FASTP_DIR}/{{sample}}.unpaired.R1.fastq.gz',
+        un2 = f'{FASTP_DIR}/{{sample}}.unpaired.R2.fastq.gz',
 
     output:
-        un = f'{FASTP_DIR}/{sample}.unpaired.fastq.gz'
+        un = f'{FASTP_DIR}/{{sample}}.unpaired.fastq.gz'
 
     shell:
         """
@@ -107,12 +113,12 @@ rule cat_fastq_unpaired:
 
 rule cleanifyer_paired:
     input:
-        r1 = f'{FASTP_DIR}/{sample}.R1.fastq.gz'
-        r2 = f'{FASTP_DIR}/{sample}.R2.fastq.gz'
+        r1 = f'{FASTP_DIR}/{{sample}}.R1.fastq.gz',
+        r2 = f'{FASTP_DIR}/{{sample}}.R2.fastq.gz'
 
     output:
-        r1_clean = f'{CLEANIFIER_DIR}/{sample}.R1.clean.fastq.gz'
-        r2_clean = f'{CLEANIFIER_DIR}/{sample}.R2.clean.fastq.gz'
+        r1_clean = f'{CLEANIFIER_DIR}/{{sample}}.R1.clean.fastq.gz',
+        r2_clean = f'{CLEANIFIER_DIR}/{{sample}}.R2.clean.fastq.gz'
     params:
         c_index = CLEANIFIER_INDEX
     
@@ -127,10 +133,10 @@ rule cleanifyer_paired:
 
 rule cleanifyer_unpaired:
     input:
-        un = f'{FASTP_DIR}/{sample}.unpaired.fastq.gz'
+        un = f'{FASTP_DIR}/{{sample}}.unpaired.fastq.gz'
 
     output:
-        un_clean = f'{CLEANIFIER_DIR}/{sample}.unpaired.clean.fastq.gz'
+        un_clean = f'{CLEANIFIER_DIR}/{{sample}}.unpaired.clean.fastq.gz'
     params:
         c_index = CLEANIFIER_INDEX
     
@@ -144,11 +150,11 @@ rule cleanifyer_unpaired:
 
 rule cleanifyer_analytics:
     input:
-        r1_clean = f'{CLEANIFIER_DIR}/{sample}.R1.clean.fastq.gz'
-        r2_clean = f'{CLEANIFIER_DIR}/{sample}.R2.clean.fastq.gz'
+        r1_clean = f'{CLEANIFIER_DIR}/{{sample}}.R1.clean.fastq.gz',
+        r2_clean = f'{CLEANIFIER_DIR}/{{sample}}.R2.clean.fastq.gz'
 
     output:
-        analytics_dir = f'{CLEANIFIER_DIR}/analytics/{sample}'
+        analytics_dir = f'{CLEANIFIER_DIR}/analytics/{{sample}}'
 
     shell:
         """
@@ -157,10 +163,10 @@ rule cleanifyer_analytics:
 
 rule cleanifyer_analytics_unpaired:
     input:
-        un_clean = f'{CLEANIFIER_DIR}/{sample}.unpaired.clean.fastq.gz'
+        un_clean = f'{CLEANIFIER_DIR}/{{sample}}.unpaired.clean.fastq.gz'
 
     output:
-        analytics_dir = f'{CLEANIFIER_DIR}/analytics/{sample}'
+        analytics_dir = f'{CLEANIFIER_DIR}/analytics/{{sample}}'
 
     shell:
         """
@@ -172,13 +178,13 @@ rule cleanifyer_analytics_unpaired:
 
 rule kraken2_paired:
     input:
-        r1 = f'{CLEANIFIER_DIR}/{sample}.R1.clean.fastq.gz',
-        r2 = f'{CLEANIFIER_DIR}/{sample}.R2.clean.fastq.gz',
+        r1 = f'{CLEANIFIER_DIR}/{{sample}}.R1.clean.fastq.gz',
+        r2 = f'{CLEANIFIER_DIR}/{{sample}}.R2.clean.fastq.gz',
 
     output:
-        r1_out = f'{KRAKEN_DIR}/{sample}_k2.out',
-        r1_report = f'{KRAKEN_DIR}/{sample}_k2profile.txt',
-        r1_unclassified = f'{KRAKEN_DIR}/{sample}_uncl#.fq.gz'
+        r1_out = f'{KRAKEN_DIR}/{{sample}}_k2.out',
+        r1_report = f'{KRAKEN_DIR}/{{sample}}_k2profile.txt',
+        r1_unclassified = f'{KRAKEN_DIR}/{{sample}}_uncl#.fq.gz'
     params:
         kraken_db = config["kraken_db"]
 
@@ -192,12 +198,12 @@ rule kraken2_paired:
 
 rule kraken2_unpaired:
     input:
-        un = f'{CLEANIFIER_DIR}/{sample}.unpaired.clean.fastq.gz'
+        un = f'{CLEANIFIER_DIR}/{{sample}}.unpaired.clean.fastq.gz'
 
     output:
-        un_out = f'{KRAKEN_DIR}/{sample}_k2_unp.out',
-        un_report = f'{KRAKEN_DIR}/{sample}_k2profile_unp.txt',
-        un_unclassified = f'{KRAKEN_DIR}/{sample}_uncl_unpaired.fq.gz'
+        un_out = f'{KRAKEN_DIR}/{{sample}}_k2_unp.out',
+        un_report = f'{KRAKEN_DIR}/{{sample}}_k2profile_unp.txt',
+        un_unclassified = f'{KRAKEN_DIR}/{{sample}}_uncl_unpaired.fq.gz'
 
     threads:
         config["kraken_threads"]
@@ -211,11 +217,11 @@ rule kraken2_unpaired:
 
 rule combine_kreports:
     input:
-        r1_report = f'{KRAKEN_DIR}/{sample}_k2profile.txt',
-        un_report = f'{KRAKEN_DIR}/{sample}_k2profile_unp.txt'
+        r1_report = f'{KRAKEN_DIR}/{{sample}}_k2profile.txt',
+        un_report = f'{KRAKEN_DIR}/{{sample}}_k2profile_unp.txt'
 
     output:
-        combined_report = f'{KRAKEN_DIR}/{sample}_combined_k2profile.txt'
+        combined_report = f'{KRAKEN_DIR}/{{sample}}_combined_k2profile.txt'
 
     shell:
         """
@@ -224,10 +230,10 @@ rule combine_kreports:
 
 rule bracken:
     input:
-        combined_report = f'{KRAKEN_DIR}/{sample}_combined_k2profile.txt'
+        combined_report = f'{KRAKEN_DIR}/{{sample}}_combined_k2profile.txt'
 
     output:
-        bracken = f'{KRAKEN_DIR}/{sample}_brackenSpec.txt'
+        bracken = f'{KRAKEN_DIR}/{{sample}}_brackenSpec.txt'
     threads:
         config["kraken_threads"]
     params:
@@ -241,12 +247,12 @@ rule bracken:
 # 4a. merge paired end for VIRGO2_____________________________________________________________
 rule se_for_virgo:
     input:
-        r1 = f'{CLEANIFIER_DIR}/{sample}.R1.clean.fastq.gz',
-        r2 = f'{CLEANIFIER_DIR}/{sample}.R2.clean.fastq.gz',
-        un = f'{CLEANIFIER_DIR}/{sample}.unpaired.clean.fastq.gz'
+        r1 = f'{CLEANIFIER_DIR}/{{sample}}.R1.clean.fastq.gz',
+        r2 = f'{CLEANIFIER_DIR}/{{sample}}.R2.clean.fastq.gz',
+        un = f'{CLEANIFIER_DIR}/{{sample}}.unpaired.clean.fastq.gz'
 
     output:
-        se = f'{CLEANIFIER_DIR}/{sample}.clean.se.fq.gz'
+        se = f'{CLEANIFIER_DIR}/{{sample}}.clean.se.fq.gz'
 
     threads:
         config["virgo2_threads"]
@@ -260,17 +266,16 @@ rule se_for_virgo:
 
 rule virgo2_map:
     input:
-        se = f'{CLEANIFIER_DIR}/{sample}.clean.se.fq.gz'
+        se = f'{CLEANIFIER_DIR}/{{sample}}.clean.se.fq.gz'
 
     output:
-        out = f'{VIRGO_DIR}/01_map/{sample}.out',
-        directory = f'{VIRGO_DIR}/01_map/'
+        out = f'{VIRGO_DIR}/01_map/{{sample}}.out'
 
     threads:
         config["virgo2_threads"]
     
     params:
-        sample = f'{VIRGO_DIR}/01_map/{sample}'
+        sample = f'{VIRGO_DIR}/01_map/{{sample}}'
 
     shell:
         """
@@ -373,15 +378,12 @@ rule valencia_cst:
 rule vista_mgcst:
     input:
         in_virgo = f'{VIRGO_DIR}/02_compile/{DATASET}.virgo2.summary.NR.txt.gz'
+
     output:
-        out = f'{VISTA_DIR}/norm_counts_genes_{DATE}.csv'
+        out = f'{VISTA_DIR}/norm_counts_genes_{DATASET_NAME}.csv'
     params:
         vista_data = VISTA_DIR
     shell:
         """
         Rscript run_VISTA.R {input.in_virgo} {params.vista_data}
         """
-
-
-
-

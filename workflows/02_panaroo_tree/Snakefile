@@ -21,6 +21,7 @@ PANAROO_DIR = f"{CORE_DIR}/core_{CORE_THRESHOLD}"
 CORE_PREFIX = f"core{CORE_THRESHOLD}"
 
 GFF_PATHS = f"{CORE_DIR}/gff_paths.txt"
+SUMMARY_FILE = f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.pangenome_summary.tsv"
 IQTREE_PREFIX = f"{PANAROO_DIR}/iqtree/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered"
 
 
@@ -28,7 +29,8 @@ rule all:
     input:
         f"{PANAROO_DIR}/gene_presence_absence.Rtab",
         f"{PANAROO_DIR}/gene_presence_absence_roary.csv",
-        f"{IQTREE_PREFIX}.treefile"
+        f"{IQTREE_PREFIX}.treefile",
+        SUMMARY_FILE
 
 
 # PANGENOME ——————————————————————————————————————————————————————————————
@@ -166,3 +168,15 @@ rule iqtree_tree_filtered:
         iqtree -s {input.snp_fasta} -m {params.model} -B {params.bootstrap} -nt {params.threads} --redo -fconst $fconstsvar --prefix {params.prefix}
 
         '''
+
+
+rule pangenome_summary:
+    input:
+        rtab=f"{PANAROO_DIR}/gene_presence_absence.Rtab",
+        alignment=f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.aln"
+    output:
+        summary=SUMMARY_FILE
+    params:
+        core_threshold=CORE_THRESHOLD
+    script:
+        "scripts/pangenome_summary.py"

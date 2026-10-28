@@ -17,13 +17,24 @@ module editcore:
         config
 
 
-use rule * from panaroo_core exclude rename_core_files, prepare_tree_filtered as panaroo_core_*
+use rule * from panaroo_core exclude rename_core_files, prepare_tree_filtered, pangenome_summary as panaroo_core_*
 
 # rename_core_files moves the files editcore expects under their original names,
 # so skip it and feed the tree rule the original panaroo output instead.
 use rule prepare_tree_filtered from panaroo_core as panaroo_core_prepare_tree_filtered with:
     input:
         core_aln_filtered=(
+            f"{config['genomics_results_dir']}/04_pangenome/{config['dataset_name']}"
+            f"/core_{config['panaroo']['core_threshold']}/core_gene_alignment_filtered.aln"
+        ),
+
+use rule pangenome_summary from panaroo_core as panaroo_core_pangenome_summary with:
+    input:
+        rtab=(
+            f"{config['genomics_results_dir']}/04_pangenome/{config['dataset_name']}"
+            f"/core_{config['panaroo']['core_threshold']}/gene_presence_absence.Rtab"
+        ),
+        alignment=(
             f"{config['genomics_results_dir']}/04_pangenome/{config['dataset_name']}"
             f"/core_{config['panaroo']['core_threshold']}/core_gene_alignment_filtered.aln"
         ),

@@ -6,7 +6,7 @@ threads: 8
 
 panaroo:
   clean_mode: "strict"
-  alignment: "core"
+  alignment: "pan"
   family_threshold: 0.7
   core_threshold: 0.9
   refind_mode: "default"
