@@ -1,0 +1,30 @@
+configfile: "config.yaml"
+
+REPO = "NerisGarcia/snakemake-modules-hub"
+BRANCH = "main"
+
+
+module panaroo_core:
+    snakefile:
+        github(REPO, path="modules/panaroo_tree/Snakefile", branch=BRANCH)
+    config:
+        config
+
+
+module editcore:
+    snakefile:
+        github(REPO, path="modules/panaroo_editcore_previous/Snakefile", branch=BRANCH)
+    config:
+        config
+
+
+use rule * from panaroo_core as panaroo_core_*
+
+use rule * from editcore as editcore_*
+
+
+# Stage 1: snakemake panaroo_core_all
+# Stage 2: snakemake  (editcore needs panaroo files that panaroo_tree does not declare as outputs)
+rule all:
+    input:
+        rules.editcore_all.input,

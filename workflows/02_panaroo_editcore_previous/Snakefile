@@ -165,7 +165,7 @@ checkpoint select_custom_core_groups:
         core_threshold=CORE_THRESHOLD,
         file_prefix=RUN_DIR_NAME
     script:
-        "../panaroo_editcore/select_core_groups.py"
+        "scripts/select_core_groups.py"
 
 
 def selected_gene_ids(wildcards):
@@ -218,7 +218,7 @@ rule prepare_gene_alignment:
     output:
         alignment=f"{FINAL_GENE_ALIGNMENTS}/{RUN_DIR_NAME}_{{gene}}.fasta"
     script:
-        "../panaroo_editcore/prepare_gene_alignment.py"
+        "scripts/prepare_gene_alignment.py"
 
 
 rule amas_concatenate:
