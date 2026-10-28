@@ -135,6 +135,8 @@ rule validate_existing_panaroo:
         gene_sequences=directory(PANAROO_GENE_SEQUENCES),
     output:
         VALIDATION_MARKER
+    params:
+        panaroo_dir=PANAROO_DIR,
     shell:
         r"""
         test -s "{input.rtab}" || {{ echo "Missing or empty Panaroo result: {input.rtab}" >&2; exit 1; }}
@@ -144,7 +146,7 @@ rule validate_existing_panaroo:
         test -s "{input.filtered_alignment}" || {{ echo "Missing or empty Panaroo result: {input.filtered_alignment}" >&2; exit 1; }}
         test -d "{input.gene_sequences}" || {{ echo "Missing Panaroo directory: {input.gene_sequences}" >&2; exit 1; }}
         mkdir -p "$(dirname "{output}")"
-        printf 'Validated source Panaroo directory: %s\n' "{PANAROO_DIR}" > "{output}"
+        printf 'Validated source Panaroo directory: %s\n' "{params.panaroo_dir}" > "{output}"
         """
 
 

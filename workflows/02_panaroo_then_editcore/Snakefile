@@ -1,30 +1,39 @@
-configfile: "config.yaml"
-
+# Config is passed with --configfile (see run.sh); paths in it are relative to the run directory.
 REPO = "NerisGarcia/snakemake-modules-hub"
 BRANCH = "main"
 
 
 module panaroo_core:
     snakefile:
-        github(REPO, path="modules/panaroo_tree/Snakefile", branch=BRANCH)
+        github(REPO, path="workflows/02_panaroo_tree/Snakefile", branch=BRANCH)
     config:
         config
 
 
 module editcore:
     snakefile:
-        github(REPO, path="modules/panaroo_editcore_previous/Snakefile", branch=BRANCH)
+        github(REPO, path="workflows/02_panaroo_editcore_previous/Snakefile", branch=BRANCH)
     config:
         config
 
 
-use rule * from panaroo_core as panaroo_core_*
+use rule * from panaroo_core exclude rename_core_files, prepare_tree_filtered as panaroo_core_*
+
+# rename_core_files moves the files editcore expects under their original names,
+# so skip it and feed the tree rule the original panaroo output instead.
+use rule prepare_tree_filtered from panaroo_core as panaroo_core_prepare_tree_filtered with:
+    input:
+        core_aln_filtered=(
+            f"{config['genomics_results_dir']}/04_pangenome/{config['dataset_name']}"
+            f"/core_{config['panaroo']['core_threshold']}/core_gene_alignment_filtered.aln"
+        ),
 
 use rule * from editcore as editcore_*
 
 
-# Stage 1: snakemake panaroo_core_all
-# Stage 2: snakemake  (editcore needs panaroo files that panaroo_tree does not declare as outputs)
+# Stage 1: panaroo_core_all (panaroo core + tree)
+# Stage 2: default target (editcore reuses the panaroo output; see run.sh)
 rule all:
+    default_target: True
     input:
         rules.editcore_all.input,

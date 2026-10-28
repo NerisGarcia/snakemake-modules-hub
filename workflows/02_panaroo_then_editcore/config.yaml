@@ -1,7 +1,7 @@
-sample_list: "data/test/307627_ncbi_genomes_accessions.txt"
+sample_list: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
 dataset_name: "307627_ncbi_genomes"
-annot_dir: "data/test/02_annotation"
-genomics_results_dir: "data/test"
+annot_dir: "data/test/genomics/02_annotation"
+genomics_results_dir: "data/test/genomics"
 threads: 8
 
 panaroo:
@@ -12,11 +12,11 @@ panaroo:
   refind_mode: "default"
   aligner: "mafft"
   # Must equal <genomics_results_dir>/04_pangenome/<dataset_name>/core_<core_threshold>
-  existing_pangenome_dir: "data/test/04_pangenome/307627_ncbi_genomes/core_0.9"
+  existing_pangenome_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes/core_0.9"
 
 custom_alignment:
-  core_sample_list: "data/test/307627_core_samples.txt"
-  analysis_sample_list: "data/test/307627_ncbi_genomes_accessions.txt"
+  core_sample_list: "data/test/genomics/307627_core_samples.txt"
+  analysis_sample_list: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
   core_threshold: 0.9
   core_name: "v1"
   subsample_name: "only_isolates"
