@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Summarise fastp JSON reports into a CSV table (one row per sample)."""
-import argparse, csv, json, os, sys
+import argparse, contextlib, csv, json, os, sys
 
 COLS = ["sample", "reads_before", "reads_after", "gc_before", "gc_after",
         "passed_filter_reads", "low_quality_reads", "too_many_N_reads",
@@ -13,7 +13,7 @@ def row(path):
     d = json.load(open(path))
     s, f = d["summary"], d.get("filtering_result", {})
     a = d.get("adapter_cutting", {})
-    sample = os.path.basename(path).removesuffix(".json").removesuffix(".fastp")
+    sample = os.path.basename(path).removesuffix(".json").removesuffix("_report").removesuffix(".fastp")
     return {
         "sample": sample,
         "reads_before": s["before_filtering"]["total_reads"],
@@ -28,19 +28,30 @@ def row(path):
     }
 
 
+def write_table(jsons, output=None, delimiter=","):
+    delim = "\t" if delimiter == "\\t" else delimiter
+    out = open(output, "w", newline="") if output else sys.stdout
+    with out if output else contextlib.nullcontext():
+        w = csv.DictWriter(out, fieldnames=COLS, delimiter=delim)
+        w.writeheader()
+        for j in jsons:
+            w.writerow(row(j))
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("json", nargs="+", help="fastp JSON file(s)")
     p.add_argument("-o", "--output", help="output CSV (default: stdout)")
     p.add_argument("-d", "--delimiter", default=",", help="field delimiter (use '\\t' for TSV)")
     a = p.parse_args()
-    delim = "\t" if a.delimiter == "\\t" else a.delimiter
-    out = open(a.output, "w", newline="") if a.output else sys.stdout
-    w = csv.DictWriter(out, fieldnames=COLS, delimiter=delim)
-    w.writeheader()
-    for j in a.json:
-        w.writerow(row(j))
+    write_table(a.json, a.output, a.delimiter)
 
 
-if __name__ == "__main__":
+if "snakemake" in globals():
+    write_table(
+        snakemake.input,
+        snakemake.output[0],
+        snakemake.params.get("delimiter", "\\t"),
+    )
+elif __name__ == "__main__":
     main()

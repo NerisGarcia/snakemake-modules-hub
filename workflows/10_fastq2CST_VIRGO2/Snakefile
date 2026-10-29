@@ -11,6 +11,7 @@ SAMPLEFILE = config["sample_file"]
 SAMPLES = [line for line in open(SAMPLEFILE).read().splitlines() if line.strip() != ""]
 
 # DIRS
+SCRIPTS_DIR = f'{workflow.basedir}/scripts'
 RAW_DIR = config["raw_dir"]
 GRAL_OUT_DIR = config["out_dir"]
 
@@ -36,8 +37,14 @@ VIRGOTAXA_TO_RENAME = config["virgotaxa_to_rename"]
 
 rule all:
     input:
-        expand(f'{FASTP_DIR}/{{sample}}_report.json', sample=SAMPLES)
+        expand(f'{FASTP_DIR}/{{sample}}_report.json', sample=SAMPLES),
+        expand(f'{FASTP_DIR}/{{sample}}_report.tsv', sample=SAMPLES),
+        expand(f'{FASTP_DIR}/{{sample}}.fastp.unpaired.fq.gz', sample=SAMPLES),
+        expand(f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.R1.fq.gz', sample=SAMPLES),
+        expand(f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.R2.fq.gz', sample=SAMPLES),
+        expand(f'{FASTP_DIR}/{{sample}}.fastp.unpaired.fq.gz', sample=SAMPLES)
 
+    
 
 
 # 1. rawreads
@@ -87,19 +94,19 @@ rule fastp_report:
 
     output:
         tsv = f'{FASTP_DIR}/{{sample}}_report.tsv'
-    shell:
-        """
-        python scripts/fastp-json2csv.py {input.json} -o {output.tsv} -d '\\t'
-        """
+    params:
+        delimiter = '\t'
+    script:
+        "scripts/fastp-json2csv.py"
 
 
 rule cat_fastq_unpaired:
     input:
-        un1 = f'{FASTP_DIR}/{{sample}}.unpaired.R1.fastq.gz',
-        un2 = f'{FASTP_DIR}/{{sample}}.unpaired.R2.fastq.gz',
+        un2 = f'{FASTP_DIR}/{{sample}}.fastp.unpaired.R2.fq.gz',
+        un1 = f'{FASTP_DIR}/{{sample}}.fastp.unpaired.R1.fq.gz',
 
     output:
-        un = f'{FASTP_DIR}/{{sample}}.unpaired.fastq.gz'
+        un = f'{FASTP_DIR}/{{sample}}.fastp.unpaired.fq.gz'
 
     shell:
         """
@@ -113,45 +120,64 @@ rule cat_fastq_unpaired:
 
 rule cleanifyer_paired:
     input:
-        r1 = f'{FASTP_DIR}/{{sample}}.R1.fastq.gz',
-        r2 = f'{FASTP_DIR}/{{sample}}.R2.fastq.gz'
+        r1 = f'{FASTP_DIR}/{{sample}}.fastp.R1.fq.gz',
+        r2 = f'{FASTP_DIR}/{{sample}}.fastp.R2.fq.gz'
 
     output:
-        r1_clean = f'{CLEANIFIER_DIR}/{{sample}}.R1.clean.fastq.gz',
-        r2_clean = f'{CLEANIFIER_DIR}/{{sample}}.R2.clean.fastq.gz'
+        r1_clean = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean_1_keep.fq.gz',
+        r2_clean = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean_2_keep.fq.gz'
     params:
-        c_index = CLEANIFIER_INDEX
+        c_index = CLEANIFIER_INDEX,
+        sample = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean'
     
+    conda:
+        "virgo2_env"    
     threads:
         config["cleanifier_threads"]
 
     shell:
         """
-        cleanifier filter --index {params.c_index} -T {threads} --compression gz --compression-threads {threads} --compression-level 9 --threshold 0.5 --fastq {input.r1} --pairs {input.r2} --out {output.r1_clean}
+        cleanifier filter --index {params.c_index} -T {threads} --compression gz --compression-threads {threads} --compression-level 9 --threshold 0.5 --fastq {input.r1} --pairs {input.r2} --out {params.sample}
 
         """
 
 rule cleanifyer_unpaired:
     input:
-        un = f'{FASTP_DIR}/{{sample}}.unpaired.fastq.gz'
-
+        un = f'{FASTP_DIR}/{{sample}}.fastp.unpaired.fq.gz'
     output:
-        un_clean = f'{CLEANIFIER_DIR}/{{sample}}.unpaired.clean.fastq.gz'
+        un_clean = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.unpaired_keep.fq.gz'
     params:
-        c_index = CLEANIFIER_INDEX
-    
+        c_index = CLEANIFIER_INDEX,
+        sample = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.unpaired'
+    conda:
+        "virgo2_env"   
     threads:
         config["cleanifier_threads"]
 
     shell:
         """
-        cleanifier filter --index {params.c_index} -T {threads} --compression gz --compression-threads {threads} --compression-level 9 --threshold 0.5 --fastq {input.un} --out {output.un_clean}
+        cleanifier filter --index {params.c_index} -T {threads} --compression gz --compression-threads {threads} --compression-level 9 --threshold 0.5 --fastq {input.un} --out {params.sample}
+        """
+
+rule change_cleanifier_names:
+    input:
+        r1_clean = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean_1_keep.fq.gz',
+        r2_clean = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean_2_keep.fq.gz'
+
+    output:
+        r1_clean_new = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.R1.fq.gz',
+        r2_clean_new = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.R2.fq.gz'
+
+    shell:
+        """
+        mv {input.r1_clean} {output.r1_clean_new}
+        mv {input.r2_clean} {output.r2_clean_new}
         """
 
 rule cleanifyer_analytics:
     input:
-        r1_clean = f'{CLEANIFIER_DIR}/{{sample}}.R1.clean.fastq.gz',
-        r2_clean = f'{CLEANIFIER_DIR}/{{sample}}.R2.clean.fastq.gz'
+        r1_clean = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.R1.fq.gz',
+        r2_clean = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.R2.fq.gz'
 
     output:
         analytics_dir = f'{CLEANIFIER_DIR}/analytics/{{sample}}'
@@ -163,7 +189,7 @@ rule cleanifyer_analytics:
 
 rule cleanifyer_analytics_unpaired:
     input:
-        un_clean = f'{CLEANIFIER_DIR}/{{sample}}.unpaired.clean.fastq.gz'
+        un_clean = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.unpaired_keep.fq.gz'
 
     output:
         analytics_dir = f'{CLEANIFIER_DIR}/analytics/{{sample}}'
@@ -178,8 +204,8 @@ rule cleanifyer_analytics_unpaired:
 
 rule kraken2_paired:
     input:
-        r1 = f'{CLEANIFIER_DIR}/{{sample}}.R1.clean.fastq.gz',
-        r2 = f'{CLEANIFIER_DIR}/{{sample}}.R2.clean.fastq.gz',
+        r1 = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.R1.fq.gz',
+        r2 = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.R2.fq.gz',
 
     output:
         r1_out = f'{KRAKEN_DIR}/{{sample}}_k2.out',
@@ -336,7 +362,7 @@ rule correc_virgo_taxa_names:
 
     shell:
         """
-        python scripts/virgo2_correct_taxa_names.py \
+        python {SCRIPTS_DIR}/virgo2_correct_taxa_names.py \
             -i {input.in_virgo} \
             -o {output.out} \
             -t {params.taxa_names_to_change}
@@ -352,7 +378,7 @@ rule virgo2_add_read_count:
 
     shell:
         """
-        python scripts/virgo2_add_read_count.py \
+        python {SCRIPTS_DIR}/virgo2_add_read_count.py \
             -i {input.in_virgo} \
             -o {output.out}
         """

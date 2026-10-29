@@ -7,3 +7,4 @@
 - [ ] add some fasta clean step (Fixcore?)
 - [x] ~~test hmmclener in the server using a small aln: \~/perl5/bin/HmmCleaner.pl aln –~~
   - [ ] hmmer is its working on the server! But not in my computer.
+- [ ] En teoria deberia de poner eliminar panaroo_edit core porque ya he creado el prev que se basa en que haya un panaroo previo

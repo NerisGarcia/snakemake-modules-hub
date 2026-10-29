@@ -74,7 +74,6 @@ rule pangenome_panaroo:
     params:
         out_dir = PANAROO_DIR,
         clean_mode=config["panaroo"]["clean_mode"],
-        alignment=config["panaroo"]["alignment"],
         family_threshold=config["panaroo"]["family_threshold"],
         core_threshold=CORE_THRESHOLD,
         refind_mode=config["panaroo"]["refind_mode"],
@@ -91,7 +90,7 @@ rule pangenome_panaroo:
           -o {params.out_dir} \
           --clean-mode {params.clean_mode} \
           --remove-invalid-genes \
-          -a {params.alignment} \
+          -a pan \
           --family_threshold {params.family_threshold} \
           --core_threshold {params.core_threshold} \
           --merge_paralogs \
