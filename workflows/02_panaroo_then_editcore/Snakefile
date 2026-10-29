@@ -5,13 +5,9 @@ PANAROO_DIR = (
     f"{config['genomics_results_dir']}/04_pangenome/{config['dataset_name']}"
     f"/core_{config['panaroo']['core_threshold']}"
 )
-EDITCORE_CONFIG = {
-    **config,
-    "panaroo": {
-        **config["panaroo"],
-        "existing_pangenome_dir": PANAROO_DIR,
-    },
-}
+
+# editcore requires this key; derive it from panaroo_core's output location.
+config["panaroo"]["existing_pangenome_dir"] = PANAROO_DIR
 
 
 module panaroo_core:
@@ -25,7 +21,7 @@ module editcore:
     snakefile:
         github(REPO, path="workflows/02_panaroo_editcore_previous/Snakefile", branch=BRANCH)
     config:
-        EDITCORE_CONFIG
+        config
 
 
 use rule * from panaroo_core exclude rename_core_files, prepare_tree_filtered, pangenome_summary as panaroo_core_*
