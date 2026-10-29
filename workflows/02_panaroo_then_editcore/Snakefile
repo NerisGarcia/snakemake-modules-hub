@@ -24,7 +24,19 @@ module editcore:
         config
 
 
-use rule * from panaroo_core exclude rename_core_files, prepare_tree_filtered, pangenome_summary as panaroo_core_*
+use rule * from panaroo_core exclude rename_core_files, prepare_tree_filtered, pangenome_summary, pangenome_panaroo as panaroo_core_*
+
+# Also declare the Panaroo outputs editcore consumes, so the DAG chains panaroo -> editcore.
+use rule pangenome_panaroo from panaroo_core as panaroo_core_pangenome_panaroo with:
+    output:
+        gene_presence_absence=f"{PANAROO_DIR}/gene_presence_absence.Rtab",
+        core_alignment=f"{PANAROO_DIR}/core_gene_alignment.aln",
+        core_aln_filtered=f"{PANAROO_DIR}/core_gene_alignment_filtered.aln",
+        core_aln_filtered_head=f"{PANAROO_DIR}/core_alignment_filtered_header.embl",
+        core_aln_head=f"{PANAROO_DIR}/core_alignment_header.embl",
+        pangenome=f"{PANAROO_DIR}/gene_presence_absence_roary.csv",
+        combined_cds=f"{PANAROO_DIR}/combined_DNA_CDS.fasta",
+        gene_sequences=directory(f"{PANAROO_DIR}/aligned_gene_sequences"),
 
 # rename_core_files moves the files editcore expects under their original names,
 # so skip it and feed the tree rule the original panaroo output instead.

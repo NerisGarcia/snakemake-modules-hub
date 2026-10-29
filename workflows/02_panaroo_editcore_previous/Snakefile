@@ -135,7 +135,7 @@ rule validate_existing_panaroo:
         combined_cds=PANAROO_COMBINED_CDS,
         core_alignment=PANAROO_CORE_ALIGNMENT,
         filtered_alignment=PANAROO_FILTERED_ALIGNMENT,
-        gene_sequences=directory(PANAROO_GENE_SEQUENCES),
+        gene_sequences=PANAROO_GENE_SEQUENCES,
     output:
         VALIDATION_MARKER
     params:
