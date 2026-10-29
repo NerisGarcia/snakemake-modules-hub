@@ -1,6 +1,17 @@
 # Config is passed with --configfile (see run.sh); paths in it are relative to the run directory.
 REPO = "NerisGarcia/snakemake-modules-hub"
 BRANCH = "main"
+PANAROO_DIR = (
+    f"{config['genomics_results_dir']}/04_pangenome/{config['dataset_name']}"
+    f"/core_{config['panaroo']['core_threshold']}"
+)
+EDITCORE_CONFIG = {
+    **config,
+    "panaroo": {
+        **config["panaroo"],
+        "existing_pangenome_dir": PANAROO_DIR,
+    },
+}
 
 
 module panaroo_core:
@@ -14,7 +25,7 @@ module editcore:
     snakefile:
         github(REPO, path="workflows/02_panaroo_editcore_previous/Snakefile", branch=BRANCH)
     config:
-        config
+        EDITCORE_CONFIG
 
 
 use rule * from panaroo_core exclude rename_core_files, prepare_tree_filtered, pangenome_summary as panaroo_core_*
