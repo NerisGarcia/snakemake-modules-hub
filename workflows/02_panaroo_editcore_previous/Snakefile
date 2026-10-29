@@ -211,7 +211,7 @@ rule mafft_per_gene:
         alignment=f"{MAFFT_DIR}/{RUN_DIR_NAME}_{{gene}}.fasta"
     threads: config["threads"]
     conda:
-        "panaroo_editcore_env.yaml"
+        "panaroo_env"
     shell:
         "mafft --adjustdirection --auto --thread {threads} {input.fasta} > {output.alignment}"
 
@@ -233,7 +233,7 @@ rule amas_concatenate:
         alignment=CUSTOM_ALIGNMENT,
         partitions=PARTITIONS_FILE
     conda:
-        "panaroo_editcore_env.yaml"
+        "panaroo_env"
     shell:
         "AMAS.py concat -i {input.alignments} -f fasta -d dna -t {output.alignment} -p {output.partitions}"
 
@@ -247,7 +247,7 @@ rule summarize_custom_alignments:
         gene_dir=FINAL_GENE_ALIGNMENTS,
         amas_dir=AMAS_DIR
     conda:
-        "panaroo_editcore_env.yaml"
+        "panaroo_env"
     shell:
         r"""
         mkdir -p "{params.amas_dir}"
@@ -269,7 +269,7 @@ rule prepare_tree:
         snp_fasta=f"{TREE_PREFIX}.SNPs.fasta",
         fconts_file=f"{TREE_PREFIX}.fconst.txt"
     conda:
-        "panaroo_editcore_env.yaml"
+        "panaroo_env"
     threads: config["threads"]
     shell:
         r"""
@@ -287,7 +287,7 @@ rule iqtree_tree:
     output:
         tree_file=f"{TREE_PREFIX}.treefile"
     conda:
-        "panaroo_editcore_env.yaml"
+        "panaroo_env"
     params:
         model=config["iqtree"]["model"],
         bootstrap=config["iqtree"]["bootstrap"],
