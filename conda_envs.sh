@@ -45,10 +45,41 @@ rsync -avhP \
 
 
 
-
+snakemake --snakefile workflows/10_fastq2CST_VIRGO2/Snakefile --cores 4 --configfile /Users/ngarcia-gonzalez/Desktop/RESEARCH/snakemake-modules-hub/workflows/10_fastq2CST_VIRGO2/config.yml --use-conda --rerun-triggers mtime
 
 conda create -n virgo2_env
 
 conda activate virgo2_env
 
 conda install -c bioconda fastp
+
+#kraken2 test db
+
+mkdir -p data/dbs/kraken2_test_db
+
+kraken2-build --download-taxonomy --db data/dbs/kraken2_test_db --use-ftp
+kraken2-build --download-library bacteria --db data/dbs/kraken2_test_db --use-ftp
+kraken2-build --build --db data/dbs/kraken2_test_db --use-ftp
+
+
+kraken2-build --download-taxonomy --db micro_db --use-ftp
+
+
+mkdir -p data/test_db/library
+
+cat > data/test_db/library/test.fa << EOF
+>taxid|562|ecoli
+ATCGATCGATCGATCGATCGATCGATCG
+EOF
+
+
+kraken2-build --add-to-library data/test_db/libraÇry/test.fa --db data/test_db 
+kraken2-build --build --db data/test_db
+
+
+# virgo -
+# remember to install from zenodo, github doesnt work
+conda activate virgo2_env
+
+ln -s /Users/ngarcia-gonzalez/Desktop/RESEARCH/snakemake-modules-hub/VIRGO2/VIRGO2.py $CONDA_PREFIX/bin/VIRGO2.py
+chmod +x /Users/ngarcia-gonzalez/Desktop/RESEARCH/snakemake-modules-hub/VIRGO2/VIRGO2.py

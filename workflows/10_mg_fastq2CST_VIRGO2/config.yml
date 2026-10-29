@@ -15,7 +15,7 @@ virgotaxa_to_rename: data/test/metagenomics/VIRGO2/taxanames_to_change.csv
 
 # necessary databases and references
 cleanifyer_index: data/cleanifier_index/t2t_pangenome_hla_variants_cdna_cleanifier_index_k29_w33.info
-kraken_db: /local/groupshare/ravel/mfrance/software/kraken2/database/
+kraken_db: data/dbs/kraken2_test_db 
 speciateIT_valencia_ref: VALENCIA2_CST_centroids_19Aug2024.csv
 
 # threads 

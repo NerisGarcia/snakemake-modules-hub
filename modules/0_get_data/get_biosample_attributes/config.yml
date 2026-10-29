@@ -1,0 +1,9 @@
+
+
+biosamp_accessions_file: /Users/ngarcia-gonzalez/Desktop/RESEARCH/Projects/Genomic_analysis/data/1_datasets/Lcrispatus.v1.biosamples_accessions.list
+
+dataset_out_dir: /Users/ngarcia-gonzalez/Desktop/RESEARCH/Projects/Genomic_analysis/data/1_datasets/Lcrispatus.v1
+
+
+# OUTPUT
+file_prefix: Lcrispatus_v1 # suffix ".biosample_attributes.txt" will be added

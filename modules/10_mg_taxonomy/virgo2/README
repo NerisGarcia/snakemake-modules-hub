@@ -1,0 +1,8 @@
+is works with VALENCIA2_CST_centroids_19Aug2024.csv
+to download
+wget https://github.com/ravel-lab/speciateIT/blob/master/VALENCIA2_CST_centroids_19Aug2024.csv
+
+# Stage 2: editcore (reuses the panaroo output from stage 1)
+snakemake  \
+    --snakefile workflows/10_fastq2CST_VIRGO2/Snakefile --configfile "workflows/10_fastq2CST_VIRGO2/config.yml" \
+    --cores 2 --use-conda --conda-frontend conda

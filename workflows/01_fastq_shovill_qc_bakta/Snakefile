@@ -88,6 +88,24 @@ rule fastp:
             --trim_front1 2 --trim_front2 2
         """
 
+rule kraken2:
+    input:
+        r1=f"{CLEAN_DIR}/{{sample}}_1.clean.fastq.gz",
+        r2=f"{CLEAN_DIR}/{{sample}}_2.clean.fastq.gz"
+    output:
+        report=f"{KRAKEN_DIR}/{{sample}}_kraken2_report.txt"
+    params:
+        db_dir=KRAKEN_DB_DIR,
+        outdir=KRAKEN_DIR
+    threads: config["threads"]["kraken2"]
+    conda:
+        "kraken2"
+    shell:
+        """
+        kraken2 -db {params.db_dir} --threads {threads} --paired --report {output.report} --gzip-compressed {input.r1} {input.r2}
+        """
+
+
 rule checkm2:
     input:
         genome=f"{ANN_DIR}/{{sample}}.fna",

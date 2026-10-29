@@ -1,0 +1,25 @@
+#File with samples names to do
+sample_file: data/test/metagenomics/VIRGO2/sample.list
+
+dataset_name: mombabies_test
+fastp_min_length: 55
+
+# input directories
+raw_dir: data/test/metagenomics/VIRGO2/raw_data
+
+# output dir where you want to store results
+out_dir: data/test/metagenomics/VIRGO2/results
+
+#necessary virgo info
+virgotaxa_to_rename: data/test/metagenomics/VIRGO2/taxanames_to_change.csv
+
+# necessary databases and references
+cleanifyer_index: data/cleanifier_index/t2t_pangenome_hla_variants_cdna_cleanifier_index_k29_w33.info
+kraken_db: data/dbs/kraken2_test_db 
+speciateIT_valencia_ref: VALENCIA2_CST_centroids_19Aug2024.csv
+
+# threads 
+fastp_threads: 8
+cleanifier_threads: 16
+kraken_threads: 16
+virgo2_threads: 16
