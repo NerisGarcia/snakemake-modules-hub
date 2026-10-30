@@ -1,0 +1,34 @@
+# ---------------------------------------------------------------------------
+# Module config template. Keep these variable names across all modules.
+# Delete sections that do not apply; do not rename the ones you keep.
+# ---------------------------------------------------------------------------
+
+# Name of the dataset (used to name outputs)
+dataset_name: my_dataset
+
+# --- Inputs ----------------------------------------------------------------
+# File with one sample name per line
+sample_file: data/test/sample.list
+
+# Directory with the input files of this module
+raw_dir: data/test/raw_data
+
+# Specific input file(s) from a previous module, e.g. a table or compiled output
+input_file: data/test/input_file.txt
+
+# --- Outputs ---------------------------------------------------------------
+# Directory where this module stores its results
+out_dir: data/test/results/NN_module_name
+
+# --- Databases and references ----------------------------------------------
+# Paths to databases / reference files; null uses the module default (resources/)
+db_dir: null
+reference_file: null
+
+# --- Tool parameters -------------------------------------------------------
+# Tool-specific options, grouped under the tool name
+tool_name:
+  extra_args: ""
+
+# --- Threads ---------------------------------------------------------------
+threads: 8

@@ -1,0 +1,181 @@
+with open(config["sra_acc_list"]) as handle:
+    samples = [
+        line.strip()
+        for line in handle
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+
+if not samples:
+    raise ValueError("The SRA accession list is empty")
+
+raw_dir = config["sra_raw"]
+clean_dir = config["clean_dir"]
+results_dir = config["genomics_results_dir"]
+assembly_dir = f"{results_dir}/01_assembly"
+annotation_dir = f"{results_dir}/02_annotation"
+qc_dir = f"{results_dir}/03_qc"
+busco_output = f"{qc_dir}/BUSCO"
+quast_output = f"{qc_dir}/QUAST"
+checkm2_output = f"{qc_dir}/CheckM2"
+summary_table = config["summary_table"]
+
+module_configs = {
+    "fastp": {
+        "raw_dir": raw_dir,
+        "clean_dir": clean_dir,
+        "threads": config["threads"]["fastp"],
+    },
+    "shovill": {
+        "clean_dir": clean_dir,
+        "assembly_dir": assembly_dir,
+        "threads": config["threads"]["shovill"],
+    },
+    "bakta": {
+        "assembly_dir": assembly_dir,
+        "annotation_dir": annotation_dir,
+        "bakta_db": config["bakta_db"],
+        "threads": config["threads"]["bakta"],
+    },
+    "busco": {
+        "annotation_dir": annotation_dir,
+        "busco_output": busco_output,
+        "busco_lineage": config["busco_lineage"],
+        "threads": config["threads"]["busco"],
+    },
+    "quast": {
+        "annotation_dir": annotation_dir,
+        "quast_output": quast_output,
+        "threads": config["threads"]["quast"],
+    },
+    "checkm2": {
+        "annotation_dir": annotation_dir,
+        "checkm2_output": checkm2_output,
+        "checkm2_db": config["checkm2_db"],
+        "threads": config["threads"]["checkm2"],
+    },
+}
+
+module fastp_module:
+    snakefile:
+        "../../modules/01_read_preprocessing/fastp/Snakefile"
+    config:
+        module_configs["fastp"]
+
+
+module shovill_module:
+    snakefile:
+        "../../modules/02_assembly/shovill/Snakefile"
+    config:
+        module_configs["shovill"]
+
+
+module bakta_module:
+    snakefile:
+        "../../modules/03_gene_annotation/bakta/Snakefile"
+    config:
+        module_configs["bakta"]
+
+
+module busco_module:
+    snakefile:
+        "../../modules/02_assembly/busco/Snakefile"
+    config:
+        module_configs["busco"]
+
+
+module quast_module:
+    snakefile:
+        "../../modules/02_assembly/quast/Snakefile"
+    config:
+        module_configs["quast"]
+
+
+module checkm2_module:
+    snakefile:
+        "../../modules/02_assembly/checkm2/Snakefile"
+    config:
+        module_configs["checkm2"]
+
+
+use rule * from fastp_module exclude all as fastp_*
+use rule * from shovill_module exclude all as shovill_*
+use rule * from bakta_module exclude all as bakta_*
+use rule * from busco_module exclude all as busco_*
+use rule * from quast_module exclude all as quast_*
+use rule * from checkm2_module exclude all as checkm2_*
+
+step_targets = {
+    "input_r1": expand(f"{raw_dir}/{{sample}}_1.fastq.gz", sample=samples),
+    "input_r2": expand(f"{raw_dir}/{{sample}}_2.fastq.gz", sample=samples),
+    "fastp": expand(f"{clean_dir}/{{sample}}.fastp.json", sample=samples),
+    "shovill": expand(
+        f"{assembly_dir}/{{sample}}_shovill/{{sample}}.contigs.fa", sample=samples
+    ),
+    "bakta": expand(f"{annotation_dir}/{{sample}}_bakta/{{sample}}.gff3", sample=samples),
+    "busco": expand(
+        f"{busco_output}/{{sample}}_busco_short_summary.txt", sample=samples
+    ),
+    "quast": expand(
+        f"{quast_output}/{{sample}}.quast.transposed_report.tsv", sample=samples
+    ),
+    "checkm2": expand(
+        f"{checkm2_output}/{{sample}}/quality_report.tsv", sample=samples
+    ),
+}
+
+summary_inputs = [
+    path
+    for step, paths in step_targets.items()
+    if step not in {"input_r1", "input_r2"}
+    for path in paths
+]
+summary_inputs += (
+    expand(f"{clean_dir}/{{sample}}_1.clean.fastq.gz", sample=samples)
+    + expand(f"{clean_dir}/{{sample}}_2.clean.fastq.gz", sample=samples)
+    + expand(f"{clean_dir}/{{sample}}.fastp.html", sample=samples)
+    + expand(f"{annotation_dir}/{{sample}}.fna", sample=samples)
+    + expand(f"{busco_output}/{{sample}}_busco_full_table.tsv", sample=samples)
+)
+
+
+rule all:
+    default_target: True
+    input:
+        summary_table,
+        summary_inputs
+
+
+rule summary_table:
+    input:
+        summary_inputs
+    output:
+        summary_table
+    run:
+        write_summary_table()
+
+
+def write_summary_table():
+    import os
+
+    summary_dir = os.path.dirname(summary_table)
+    if summary_dir:
+        os.makedirs(summary_dir, exist_ok=True)
+    with open(summary_table, "w") as out:
+        out.write("sample\t" + "\t".join(step_targets.keys()) + "\n")
+        for index, sample in enumerate(samples):
+            row = [sample]
+            for paths in step_targets.values():
+                path = paths[index]
+                row.append(
+                    "OK"
+                    if os.path.exists(path) and os.path.getsize(path) > 0
+                    else "FAIL"
+                )
+            out.write("\t".join(row) + "\n")
+
+
+onsuccess:
+    write_summary_table()
+
+onerror:
+    write_summary_table()

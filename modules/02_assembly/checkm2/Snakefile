@@ -1,0 +1,23 @@
+
+annotation_dir = config["annotation_dir"]
+checkm2_output = config["checkm2_output"]
+checkm2_db = config["checkm2_db"]
+
+rule checkm2:
+    input:
+        genome=f"{annotation_dir}/{{sample}}.fna",
+        database=checkm2_db
+    output:
+        f"{checkm2_output}/{{sample}}/quality_report.tsv"
+    params:
+        out_dir=f"{checkm2_output}/{{sample}}"
+    threads: config["threads"]
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        rm -rf "{params.out_dir}"
+        mkdir -p "{params.out_dir}"
+        checkm2 predict --input "{input.genome}" --output-directory "{params.out_dir}" \
+            --database_path "{input.database}" --threads {threads} --force
+        """

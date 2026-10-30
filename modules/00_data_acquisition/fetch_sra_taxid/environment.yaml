@@ -1,0 +1,7 @@
+name: ncbi_download
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - entrez-direct

@@ -1,0 +1,9 @@
+name: panaroo
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - panaroo
+  - iqtree
+  - snp-sites
+  - snp-dists

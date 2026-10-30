@@ -1,0 +1,3 @@
+raw_dir: data/test/SRA_fastq
+clean_dir: data/clean
+threads: 16

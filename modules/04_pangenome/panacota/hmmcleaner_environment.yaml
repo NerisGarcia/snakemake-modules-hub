@@ -1,0 +1,6 @@
+name: hmmcleaner
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - hmmcleaner

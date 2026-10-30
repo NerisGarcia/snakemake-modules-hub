@@ -1,0 +1,32 @@
+
+annotation_dir = config["annotation_dir"]
+busco_output = config["busco_output"]
+busco_lineage = config["busco_lineage"]
+
+
+rule busco:
+    input:
+        f"{annotation_dir}/{{sample}}.fna"
+    output:
+        out2 =  f"{busco_output}/{{sample}}_busco_short_summary.txt",
+        out4 =  f"{busco_output}/{{sample}}_busco_full_table.tsv"
+    params:
+        out_dir = f"{busco_output}",
+        out1 =  f"{busco_output}/{{sample}}/short_summary.specific.{busco_lineage}.{{sample}}.txt",
+        out2 =  f"{busco_output}/{{sample}}_busco_short_summary.txt",
+        
+        out3 =  f"{busco_output}/{{sample}}/run_{busco_lineage}/full_table.tsv",
+        out4 =  f"{busco_output}/{{sample}}_busco_full_table.tsv",
+
+        sample = f"{{sample}}",
+        lineage = busco_lineage
+
+    threads: config["threads"]
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        busco -i {input} -o {params.sample} -l {params.lineage} -m genome --out_path {params.out_dir} --force --cpu {threads} 
+        mv  {params.out1} {params.out2}
+        mv {params.out3} {params.out4}
+        """

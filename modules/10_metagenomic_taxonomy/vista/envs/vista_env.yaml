@@ -1,0 +1,14 @@
+name: vista_env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - seaborn
+  - numpy
+  - streamlit
+  - pandas
+  - scipy
+  - plotly
+  - r
+prefix: /opt/miniconda3/envs/vista_env

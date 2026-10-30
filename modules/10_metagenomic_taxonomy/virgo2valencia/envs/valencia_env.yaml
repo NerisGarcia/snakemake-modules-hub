@@ -1,0 +1,9 @@
+name: valencia_env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - matplotlib
+  - pandas
+prefix: /opt/miniconda3/envs/valencia_env

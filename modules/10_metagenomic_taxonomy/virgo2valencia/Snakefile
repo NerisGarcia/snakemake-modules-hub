@@ -1,0 +1,43 @@
+VIRGO2_FILE = config["virgo2_relAbun_file"]
+
+OUT_DIR = config["out_dir"]
+DATASET = config["dataset_name"]
+
+# Use the configured reference when set; otherwise use this module's bundled file.
+VALENCIA_REF = config.get("speciateIT_valencia_ref") or f'{workflow.basedir}/resources/VALENCIA2_CST_centroids_19Aug2024.csv'
+VALENCIA_SCRIPT = f'{workflow.basedir}/scripts/Valencia_v1.2.py'
+
+rule all:
+    input:
+        f'{OUT_DIR}/{DATASET}.VALENCIA.CST.csv'
+
+rule change_CaLachVag_name:
+    input:
+        in_file = VIRGO2_FILE
+
+    output:
+        out_file = temp(f'{OUT_DIR}/{DATASET}.TEMP.relAbund.csv')
+
+    shell:
+        """
+        sed -e '1s/^,/sampleID,/' -e 's/Candidatus_Lachnocurva_vaginae/Ca_Lachnocurva_vaginae/g' {input.in_file} > {output.out_file}
+        """
+
+
+rule run_valencia:
+    input:
+        in_file = f'{OUT_DIR}/{DATASET}.TEMP.relAbund.csv'
+
+    output:
+        out_file = f'{OUT_DIR}/{DATASET}.VALENCIA.CST.csv',
+        plot = f'{OUT_DIR}/{DATASET}.VALENCIA.CST.plot.pdf'
+    params:
+        valencia_ref = VALENCIA_REF,
+        vlc_prefix = f'{OUT_DIR}/{DATASET}.VALENCIA.CST',
+        plot_prefix = f'{OUT_DIR}/{DATASET}.VALENCIA.CST.plot'
+    conda:
+        "envs/valencia_env.yaml"
+    shell:
+        """
+        python {VALENCIA_SCRIPT} -ref {params.valencia_ref} --input {input.in_file} -o {params.vlc_prefix} --metagenome --plot {params.plot_prefix}
+        """

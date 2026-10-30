@@ -1,0 +1,46 @@
+import os
+
+VIRGO2_FILE = config["virgo2_compile_file"]
+
+VISTA_EX = config["path_vista_ex"]
+VISTA_DATA_DIR = config["path_vista_data_dir"]
+
+OUT_DIR = os.path.abspath(config["out_dir"])
+VIRGO2_FILE = os.path.abspath(VIRGO2_FILE)
+
+WORKING_DIR = os.getcwd()
+
+rule all:
+    input:
+        f"{OUT_DIR}/VISTA.log"
+
+rule run_vista:
+    input:
+        virgo2_summary = VIRGO2_FILE
+    output:
+        vista_output = temp(f"{OUT_DIR}/VISTA_output.txt")
+        
+    params:
+        vista_data_dir = VISTA_DATA_DIR
+    conda:
+        "envs/vista_env.yaml"
+    shell:
+        """
+        mkdir -p {OUT_DIR:q}
+        mkdir -p {WORKING_DIR:q}
+        Rscript {VISTA_EX:q} {input.virgo2_summary:q} {params.vista_data_dir:q}
+        echo "VISTA analysis completed" > {output.vista_output}
+        """
+
+rule mv_vista_results:
+    input:
+        vista_output = f"{OUT_DIR}/VISTA_output.txt"
+    output:
+        final_output = f"{OUT_DIR}/VISTA.log"
+    params:
+        out_dir = OUT_DIR
+    shell:
+        """
+        mv mgCST_heatmap_*.pdf mgCSTs_*.csv norm_counts_genes_*.csv norm_counts_mgSs_mgCST_*.csv norm_counts_taxa_*.csv relabund_w_mgCSTs_*.csv {params.out_dir}
+        echo "VISTA analysis completed" > {output.final_output}
+        """

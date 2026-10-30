@@ -101,6 +101,16 @@ data/results/03_qc/QUAST/
 
 Bakta writes its complete output inside `{sample}_bakta`. A separate cleanup step creates the parent-level `.gff3` and `.fna` symlinks and removes unwanted `.embl`, `.png`, `.svg`, and hypothetical files. If the nested Bakta outputs already exist, rerunning the workflow can perform only this cleanup step.
 
+### Compose the same pipeline from reusable modules
+
+The module-based variant is in [workflows/01_fastq_shovill_qc_bakta_modules](workflows/01_fastq_shovill_qc_bakta_modules/README.md). It uses the configured `fastp`, `shovill`, `bakta`, `busco`, `quast`, and `checkm2` modules. Edit that workflow's `config.yaml`, then run:
+
+``` bash
+bash workflows/01_fastq_shovill_qc_bakta_modules/run.sh
+```
+
+The runner activates the `snakemake` Conda environment before invoking Snakemake. Module directories and filenames follow the convention described in [modules/README.md](modules/README.md).
+
 ## 4. Run the FASTA annotation and QC pipeline
 
 This workflow starts from existing genome assemblies and runs Bakta, BUSCO, and QUAST.

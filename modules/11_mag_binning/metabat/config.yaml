@@ -1,0 +1,5 @@
+
+# Parameters
+spades_memory_limit: 356
+spades_threads: 16
+metabat_threads: 16

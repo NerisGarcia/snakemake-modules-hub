@@ -1,0 +1,95 @@
+import os
+
+SAMPLE_FILE = config["sample_list"]
+
+with open(SAMPLE_FILE) as handle:
+    SAMPLES = [
+        line.strip()
+        for line in handle
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+
+if not SAMPLES:
+    raise ValueError("The isolate sample list is empty")
+
+ANNOT_DIR = config["annot_dir"]
+RESULTS_DIR = config["genomics_results_dir"]
+DATASET_NAME = config["dataset_name"]
+CORE_DIR = f"{RESULTS_DIR}/04_pangenome/{DATASET_NAME}"
+CORE_THRESHOLD = config["panaroo"]["core_threshold"]
+PANAROO_DIR = f"{CORE_DIR}/core_{CORE_THRESHOLD}"
+CORE_PREFIX = f"core{CORE_THRESHOLD}"
+
+GFF_PATHS = f"{CORE_DIR}/gff_paths.txt"
+SUMMARY_FILE = f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.pangenome_summary.tsv"
+IQTREE_PREFIX = f"{PANAROO_DIR}/iqtree/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered"
+
+
+rule all:
+    input:
+        f"{PANAROO_DIR}/gene_presence_absence.Rtab",
+        f"{PANAROO_DIR}/gene_presence_absence_roary.csv",
+        f"{IQTREE_PREFIX}.treefile",
+        SUMMARY_FILE
+
+
+# PANGENOME ——————————————————————————————————————————————————————————————
+
+rule prepare_tree_filtered:
+    input:
+        core_aln_filtered  = f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.aln",    
+    output:
+        vcf = f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.vcf",
+        dist =  f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.fasta.DM",
+        snp_fasta = f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.SNPs.fasta",
+        fconts_file = f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.fconst.txt",
+    conda:
+        "environment.yaml"
+    threads: config["threads"]
+    shell:
+        r'''
+          
+        snp-sites -v {input.core_aln_filtered} > {output.vcf}
+
+        snp-dists -j {threads} -m {input.core_aln_filtered} > {output.dist}
+
+        snp-sites -o {output.snp_fasta} {input.core_aln_filtered}
+
+        fconstsvar=$(snp-sites -C {input.core_aln_filtered})
+
+        echo $fconstsvar > {output.fconts_file}
+
+        '''
+
+
+rule iqtree_tree_filtered:
+    input:
+        snp_fasta = f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.SNPs.fasta",
+        fconts_file = f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.fconst.txt",
+    output:
+        tree_file =  f"{IQTREE_PREFIX}.treefile"
+    conda:
+        "environment.yaml"
+    params:
+        model = config["iqtree"]["model"],
+        bootstrap = config["iqtree"]["bootstrap"],
+        threads = config["threads"],
+        prefix = f"{IQTREE_PREFIX}"
+
+    shell:
+        r'''
+        fconstsvar=$(cat {input.fconts_file})
+        iqtree -s {input.snp_fasta} -m {params.model} -B {params.bootstrap} -nt {params.threads} --redo -fconst $fconstsvar --prefix {params.prefix}
+
+        '''
+
+
+rule tree_summary:
+    input:
+        rtab=f"{PANAROO_DIR}/gene_presence_absence.Rtab",
+        alignment=f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.aln"
+    output:
+        summary=SUMMARY_FILE
+    params:
+    script:
+        # por hacer

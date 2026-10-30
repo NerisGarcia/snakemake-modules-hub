@@ -1,0 +1,9 @@
+name: metabat
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - spades
+  - bowtie2
+  - samtools
+  - metabat2

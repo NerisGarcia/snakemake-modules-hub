@@ -1,0 +1,8 @@
+name: kraken2_paired_end
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - kraken2
+  - bracken
+  - krakentools

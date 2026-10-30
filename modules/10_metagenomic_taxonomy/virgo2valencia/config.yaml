@@ -1,0 +1,14 @@
+
+# Name of the dataset
+dataset_name: mombabies_test
+
+# Path to the VIRGO2 relative abundance file
+virgo2_relAbun_file: data/test/metagenomics/VIRGO2/results/04_virgo2/03_taxonomy/mombabies_test.relAbund.csv
+
+# output dir where you want to store results
+out_dir: data/test/metagenomics/VIRGO2/results/05_valencia
+
+# reference file for centroids used by VALENCIA
+# if null or not specified, the default reference will be used
+# resources/VALENCIA2_CST_centroids_19Aug2024.csv
+speciateIT_valencia_ref: null

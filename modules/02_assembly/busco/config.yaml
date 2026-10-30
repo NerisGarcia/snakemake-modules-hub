@@ -1,0 +1,4 @@
+annotation_dir: data/results/02_annotation
+busco_output: data/results/03_qc/BUSCO
+busco_lineage: bacteria_odb12
+threads: 8

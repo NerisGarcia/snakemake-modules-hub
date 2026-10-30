@@ -1,0 +1,73 @@
+# run kraken _____________________________________________________________
+
+cleanifier_dir = config["cleanifier_dir"]
+kraken_dir = config["kraken_dir"]
+
+rule kraken2_paired:
+    input:
+        r1_clean_new = f'{cleanifier_dir}/{{sample}}.fastp_clean.R1.fq.gz',
+        r2_clean_new = f'{cleanifier_dir}/{{sample}}.fastp_clean.R2.fq.gz',
+
+    output:
+        r1_out = f'{kraken_dir}/{{sample}}_k2.out',
+        r1_report = f'{kraken_dir}/{{sample}}_k2profile.txt',
+        r1_unclassified = f'{kraken_dir}/{{sample}}_uncl#.fq.gz'
+    params:
+        kraken_db = config["kraken_db"]
+    conda:
+        "environment.yaml"
+    threads:
+        config["kraken_threads"]
+
+    shell:
+        """
+        kraken2 --db {params.kraken_db} --threads {threads} --use-names --unclassified-out {output.r1_unclassified} --output {output.r1_out} --report {output.r1_report} --gzip-compressed --paired {input.r1_clean_new} {input.r2_clean_new}
+        """
+
+rule kraken2_unpaired:
+    input:
+        un = f'{cleanifier_dir}/{{sample}}.fastp_clean.unpaired.fq.gz'
+
+    output:
+        un_out = f'{kraken_dir}/{{sample}}_k2_unp.out',
+        un_report = f'{kraken_dir}/{{sample}}_k2profile_unp.txt',
+        un_unclassified = f'{kraken_dir}/{{sample}}_fastp_clean.unpaired.fq.gz'
+
+    threads:
+        config["kraken_threads"]
+    params:
+        kraken_db = config["kraken_db"]
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        kraken2 --db {params.kraken_db} {input.un} --threads {threads} --use-names --unclassified-out {output.un_unclassified} --output {output.un_out} --report {output.un_report} --gzip-compressed
+        """
+
+rule combine_kreports:
+    input:
+        r1_report = f'{kraken_dir}/{{sample}}_k2profile.txt',
+        un_report = f'{kraken_dir}/{{sample}}_k2profile_unp.txt'
+
+    output:
+        combined_report = f'{kraken_dir}/{{sample}}_combined_k2profile.txt'
+
+    shell:
+        """
+        combine_kreports.py -r {input.r1_report} {input.un_report} -o {output.combined_report}
+        """
+
+rule bracken:
+    input:
+        combined_report = f'{kraken_dir}/{{sample}}_combined_k2profile.txt'
+
+    output:
+        bracken = f'{kraken_dir}/{{sample}}_brackenSpec.txt'
+    threads:
+        config["kraken_threads"]
+    params:
+        kraken_db = config["kraken_db"]
+    shell:
+        """
+        bracken -i {input.combined_report} -o {output.bracken} -l S -d {params.kraken_db}
+        """

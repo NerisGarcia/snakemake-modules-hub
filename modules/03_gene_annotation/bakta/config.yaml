@@ -1,0 +1,4 @@
+assembly_dir: data/results/01_assembly
+annotation_dir: data/results/02_annotation
+bakta_db: /path/to/bakta/db
+threads: 4

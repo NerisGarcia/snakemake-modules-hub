@@ -1,0 +1,4 @@
+cleanifier_dir: data/test/metagenomics/VIRGO2/results/02_cleanifier
+kraken_dir: data/test/metagenomics/VIRGO2/results/03_kraken
+kraken_db: data/dbs/kraken2_test_db
+kraken_threads: 16

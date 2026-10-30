@@ -1,0 +1,10 @@
+name: panacota
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - panacota
+  - mafft
+  - amas
+  - iqtree
+  - hmmcleaner

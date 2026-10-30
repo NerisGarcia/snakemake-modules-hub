@@ -1,0 +1,4 @@
+annotation_dir: data/results/02_annotation
+checkm2_output: data/results/03_qc/CheckM2
+checkm2_db: /path/to/checkm2/CheckM2_database/uniref100.KO.1.dmnd
+threads: 8

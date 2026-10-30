@@ -1,0 +1,21 @@
+
+annotation_dir = config["annotation_dir"]
+quast_output = config["quast_output"]
+
+rule assembly_qc_sample:
+    input:
+        f"{annotation_dir}/{{sample}}.fna"
+    output:
+        f"{quast_output}/{{sample}}.quast.transposed_report.tsv"
+    conda:
+        "environment.yaml"
+    params:
+        out_dir = f"{quast_output}/{{sample}}_quast"
+    threads: config["threads"]
+    shell:
+        r'''
+        quast.py {input} -o {params.out_dir} --threads {threads} --glimmer --no-sv --no-icarus --no-plots --min-contig 200
+
+        mv {params.out_dir}/transposed_report.tsv {output}
+        rm -rf {params.out_dir}
+        '''

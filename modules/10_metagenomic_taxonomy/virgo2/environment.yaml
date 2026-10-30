@@ -1,0 +1,10 @@
+name: virgo2
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python
+  - fastp
+  - cleanifier
+  - kraken2
+  - seqkit

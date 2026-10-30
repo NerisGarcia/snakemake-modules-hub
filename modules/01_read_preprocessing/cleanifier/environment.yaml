@@ -1,0 +1,8 @@
+name: cleanifier
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - cleanifier
+  - seqkit
+  - python

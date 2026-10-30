@@ -1,0 +1,3 @@
+annotation_dir: data/results/02_annotation
+quast_output: data/results/03_qc/QUAST
+threads: 16

@@ -1,0 +1,24 @@
+
+clean_dir = config["clean_dir"]
+assembly_dir = config["assembly_dir"]
+
+rule shovill:
+    input:
+        r1=f"{clean_dir}/{{sample}}_1.clean.fastq.gz",
+        r2=f"{clean_dir}/{{sample}}_2.clean.fastq.gz"
+    output:
+        contigs=f"{assembly_dir}/{{sample}}_shovill/{{sample}}.contigs.fa"
+    params:
+        out_dir=f"{assembly_dir}/{{sample}}_shovill"
+    threads: config["threads"]
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        mkdir -p {params.out_dir}
+        shovill --R1 {input.r1} --R2 {input.r2} \
+            --outdir {params.out_dir} --cpus {threads} --force
+        
+        mv {params.out_dir}/contigs.fa {output.contigs}
+
+        """
