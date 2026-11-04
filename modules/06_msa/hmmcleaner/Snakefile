@@ -1,7 +1,6 @@
-from pathlib import Path
 
+INPUT_FILE = config["input_file"]
 
-INPUT_NAME = Path(config["input_file"]).name
 RESULTS_DIR = f"{config['out_dir']}/{config['dataset_name']}"
 LOG_FILE = f"{config['out_dir']}/logs/{config['dataset_name']}.log"
 
@@ -11,17 +10,26 @@ rule all:
         RESULTS_DIR
 
 
+# HmmCleaner only works when run from the alignment's directory and writes its
+# outputs (<stem>_hmm.*) there, so they are moved to the output directory.
 rule hmmcleaner:
     input:
-        alignment=config["input_file"]
+        alignment=INPUT_FILE
     output:
         results=directory(RESULTS_DIR)
-    params:
-        input_name=INPUT_NAME
     log:
         LOG_FILE
     threads: 1
     shell:
         r"""
-        HmmCleaner.pl {params.input_name:q} --large -profile=leave-one-out
+        mkdir -p {output.results:q} "$(dirname {log:q})"
+        exec > {log:q} 2>&1
+
+        in_dir=$(dirname {input.alignment:q})
+        name=$(basename {input.alignment:q})
+        stem="${{name%.*}}"
+
+        (cd "$in_dir" && HmmCleaner.pl "$name" --large -profile=leave-one-out)
+
+        mv "$in_dir/${{stem}}"_hmm* {output.results:q}/
         """

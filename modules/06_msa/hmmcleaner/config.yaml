@@ -1,7 +1,7 @@
 dataset_name: my_alignment
 
 # Input multiple-sequence alignment to clean
-input_file: data/test/genomics/04_pangenome_editcore_previous/307627_ncbi_genomes/core_v1_subsample_only_isolates_0.9/mafft/core_v1_subsample_only_isolates_0.9_group_10484.fasta
+input_file: /data/test/genomics/04_pangenome_editcore_previous/307627_ncbi_genomes/core_v1_subsample_only_isolates_0.9/mafft/core_v1_subsample_only_isolates_0.9_group_10484.fasta
 
 # Directory where HmmCleaner result files are written
 out_dir:  data/test/genomics/04_pangenome_editcore_previous/307627_ncbi_genomes/core_v1_subsample_only_isolates_0.9/hmmcleaner
