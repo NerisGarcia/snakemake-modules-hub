@@ -17,8 +17,7 @@ rule hmmcleaner:
     output:
         results=directory(RESULTS_DIR)
     params:
-        input_name=INPUT_NAME,
-        extra_args=config["hmmcleaner"]["extra_args"]
+        input_name=INPUT_NAME
     log:
         LOG_FILE
     threads: 1
