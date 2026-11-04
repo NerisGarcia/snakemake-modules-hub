@@ -5,4 +5,3 @@ channels:
 dependencies:
   - mafft
   - amas
-  - hmmcleaner
