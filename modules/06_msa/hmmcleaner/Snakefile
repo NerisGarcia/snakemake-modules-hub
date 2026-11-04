@@ -23,5 +23,5 @@ rule hmmcleaner:
     threads: 1
     shell:
         r"""
-        HmmCleaner.pl {params.input_name:q} --large -profile leave-one-out
+        HmmCleaner.pl {params.input_name:q} --large -profile=leave-one-out
         """
