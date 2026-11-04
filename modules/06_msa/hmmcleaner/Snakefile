@@ -1,8 +1,7 @@
 
 INPUT_FILE = config["input_file"]
 
-RESULTS_DIR = f"{config['out_dir']}/{config['dataset_name']}"
-LOG_FILE = f"{config['out_dir']}/logs/{config['dataset_name']}.log"
+RESULTS_DIR = f"{config['out_dir']}"
 
 
 rule all:
@@ -17,8 +16,6 @@ rule hmmcleaner:
         alignment=INPUT_FILE
     output:
         results=directory(RESULTS_DIR)
-    log:
-        LOG_FILE
     threads: 1
     shell:
         r"""
