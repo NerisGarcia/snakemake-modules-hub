@@ -1,24 +1,15 @@
-
 # One isolate ID per line; each isolate must have a GFF under annot_dir/{isolate}.gff3.
-sample_list: "data/test/307627_ncbi_genomes_accessions.txt"
-
+sample_list: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
 dataset_name: "307627_ncbi_genomes"
-
-# Directory containing annotation outputs, with parent-level files such as {isolate}.gff3.
-annot_dir: "data/test/02_annotation"
-
-genomics_results_dir: "data/test"
-
+annot_dir: "data/test/genomics/02_annotation"
+# Results go to pangenome_dir/core_{core_threshold}/
+pangenome_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes"
 threads: 8
 
-panaroo:
-  clean_mode: "strict"
-  alignment: "core"
-  family_threshold: 0.7
-  core_threshold: 0.9
-  refind_mode: "default"
-  aligner: "mafft"
-
-iqtree:
-  model: "GTR+I+G"
-  bootstrap: 1000
+clean_mode: "strict"
+# "pan" is required by downstream modules (aligned_gene_sequences, combined_DNA_CDS)
+alignment: "pan"
+family_threshold: 0.7
+core_threshold: 0.9
+refind_mode: "default"
+aligner: "mafft"

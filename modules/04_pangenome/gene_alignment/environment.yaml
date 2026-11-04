@@ -1,6 +1,7 @@
+name: gene_alignment
 channels:
   - conda-forge
   - bioconda
 dependencies:
-  - amas
   - mafft
+  - amas

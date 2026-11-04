@@ -1,24 +1,9 @@
-
-# One isolate ID per line; each isolate must have a GFF under annot_dir/{isolate}.gff3.
-sample_list: "data/test/307627_ncbi_genomes_accessions.txt"
-
-dataset_name: "307627_ncbi_genomes"
-
-# Directory containing annotation outputs, with parent-level files such as {isolate}.gff3.
-annot_dir: "data/test/02_annotation"
-
-genomics_results_dir: "data/test"
-
+# Alignment to build the tree from (core gene alignment, FASTA).
+alignment: "data/test/genomics/04_pangenome/307627_ncbi_genomes/core_0.9/core_gene_alignment_filtered.aln"
+# Output prefix; produces {prefix}.vcf, .fasta.DM, .SNPs.fasta, .fconst.txt, .treefile, .iqtree
+prefix: "data/test/genomics/04_pangenome/307627_ncbi_genomes/core_0.9/iqtree/307627_ncbi_genomes.core0.9.gene_alignment_filtered"
 threads: 8
-
-panaroo:
-  clean_mode: "strict"
-  alignment: "core"
-  family_threshold: 0.7
-  core_threshold: 0.9
-  refind_mode: "default"
-  aligner: "mafft"
-
-iqtree:
-  model: "GTR+I+G"
-  bootstrap: 1000
+model: "GTR+I+G"
+bootstrap: 1000
+# true adds IQ-TREE's --fast search
+fast: false

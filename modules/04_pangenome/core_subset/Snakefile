@@ -1,0 +1,142 @@
+import os
+
+
+def read_unique_sample_list(path, label):
+    with open(path) as handle:
+        samples = [
+            line.strip()
+            for line in handle
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+    if not samples:
+        raise ValueError(f"{label} is empty: {path}")
+    if len(samples) != len(set(samples)):
+        raise ValueError(f"{label} contains duplicate sample IDs: {path}")
+    return samples
+
+
+sample_file = config["sample_list"]
+core_list = config.get("core_sample_list") or None
+analysis_list = config.get("analysis_sample_list") or None
+# Lists that do not apply fall back to the full dataset
+core_sample_file = core_list or sample_file
+analysis_sample_file = analysis_list or sample_file
+dataset_name = config["dataset_name"]
+pangenome_dir = config["pangenome_dir"]
+core_threshold = config["core_threshold"]
+panaroo_dir = f"{pangenome_dir}/core_{core_threshold}"
+
+# Run name encodes which lists were given (false/empty = not applied):
+#   core list only -> subcore, analysis list only -> core_subsamp, both -> subcore_subsamp
+if not (core_list or analysis_list):
+    raise ValueError("Set core_sample_list and/or analysis_sample_list")
+prefix = "_".join(
+    part for part in (
+        "subcore" if core_list else "core",
+        "subsamp" if analysis_list else "",
+    ) if part
+)
+run_name = f"{prefix}.{dataset_name}.{core_threshold}"
+run_dir = f"{pangenome_dir}/{run_name}"
+# Produced by the gene_alignment module
+summary_alignment = f"{run_dir}/{run_name}.gene_alignment.aln"
+summary_file = f"{run_dir}/{run_name}.pangenome_summary.tsv"
+
+samples = read_unique_sample_list(sample_file, "sample_list")
+core_samples = read_unique_sample_list(core_sample_file, "core_sample_list")
+analysis_samples = read_unique_sample_list(analysis_sample_file, "analysis_sample_list")
+
+for label, selected in (
+    ("core_sample_list", core_samples),
+    ("analysis_sample_list", analysis_samples),
+):
+    outside_dataset = sorted(set(selected) - set(samples))
+    if outside_dataset:
+        raise ValueError(
+            f"{label} contains samples not in sample_list: " + ", ".join(outside_dataset)
+        )
+
+panaroo_rtab = f"{panaroo_dir}/gene_presence_absence.Rtab"
+panaroo_roary = f"{panaroo_dir}/gene_presence_absence_roary.csv"
+panaroo_combined_cds = f"{panaroo_dir}/combined_DNA_CDS.fasta"
+panaroo_core_alignment = f"{panaroo_dir}/core_gene_alignment.aln"
+panaroo_filtered_alignment = f"{panaroo_dir}/core_gene_alignment_filtered.aln"
+panaroo_gene_sequences = f"{panaroo_dir}/aligned_gene_sequences"
+
+validation_marker = f"{run_dir}/.panaroo_results_validated"
+filtered_roary = f"{run_dir}/gene_presence_absence.selected_samples.csv"
+core_groups = f"{run_dir}/selected_core_groups.tsv"
+sample_log = f"{run_dir}/sample_selection.tsv"
+gene_fastas = f"{run_dir}/selected_gene_fastas"
+log_dir = f"{run_dir}/logs"
+
+
+rule all:
+    input:
+        filtered_roary,
+        core_groups,
+        sample_log,
+        summary_file
+
+
+rule validate_existing_panaroo:
+    input:
+        rtab=panaroo_rtab,
+        roary=panaroo_roary,
+        combined_cds=panaroo_combined_cds,
+        core_alignment=panaroo_core_alignment,
+        filtered_alignment=panaroo_filtered_alignment,
+        gene_sequences=panaroo_gene_sequences
+    output:
+        validation_marker
+    params:
+        panaroo_dir=panaroo_dir
+    log:
+        f"{log_dir}/validate_existing_panaroo.log"
+    shell:
+        r"""
+        mkdir -p "$(dirname "{log}")"
+        for f in {input.rtab} {input.roary} {input.combined_cds} {input.core_alignment} {input.filtered_alignment}; do
+            test -s "$f" || {{ echo "Missing or empty Panaroo result: $f" >&2; exit 1; }}
+        done 2> {log}
+        test -d "{input.gene_sequences}" || {{ echo "Missing Panaroo directory: {input.gene_sequences}" >&2; exit 1; }}
+        printf 'Validated source Panaroo directory: %s\n' "{params.panaroo_dir}" > "{output}"
+        """
+
+
+rule select_custom_core_groups:
+    input:
+        validation=validation_marker,
+        roary=panaroo_roary,
+        gene_sequence_dir=panaroo_gene_sequences,
+        core_samples=core_sample_file,
+        analysis_samples=analysis_sample_file,
+        all_samples=sample_file
+    output:
+        filtered_roary=filtered_roary,
+        core_groups=core_groups,
+        sample_log=sample_log,
+        gene_fastas=directory(gene_fastas)
+    params:
+        core_threshold=core_threshold,
+        file_prefix=run_name
+    log:
+        f"{log_dir}/select_custom_core_groups.log"
+    script:
+        "scripts/select_core_groups.py"
+
+
+rule pangenome_summary:
+    input:
+        rtab=panaroo_rtab,
+        alignment=summary_alignment,
+        core_groups=core_groups
+    output:
+        summary=summary_file
+    params:
+        core_threshold=core_threshold,
+        analysis_samples=len(analysis_samples)
+    log:
+        f"{log_dir}/pangenome_summary.log"
+    script:
+        "scripts/pangenome_summary.py"

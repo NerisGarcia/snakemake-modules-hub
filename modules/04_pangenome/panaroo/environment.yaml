@@ -4,6 +4,4 @@ channels:
   - bioconda
 dependencies:
   - panaroo
-  - iqtree
-  - snp-sites
-  - snp-dists
+  - mafft

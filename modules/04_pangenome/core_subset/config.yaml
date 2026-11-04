@@ -1,0 +1,16 @@
+dataset_name: "307627_ncbi_genomes"
+# Full dataset used for the Panaroo run (one isolate ID per line).
+sample_list: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
+# Optional; use false (or empty) when not applied, but at least one is required.
+#   core_sample_list only      -> output dir subcore.{dataset_name}.{core_threshold}
+#   analysis_sample_list only  -> core_subsamp.{dataset_name}.{core_threshold}
+#   both                       -> subcore_subsamp.{dataset_name}.{core_threshold}
+# Samples that define the core genes:
+core_sample_list: "data/test/genomics/307627_core_samples.txt"
+# Samples kept in the output alignment and tables:
+analysis_sample_list: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
+
+# Panaroo output is read from {pangenome_dir}/core_{core_threshold};
+# results go to {pangenome_dir}/<name above>.
+pangenome_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes"
+core_threshold: 0.9

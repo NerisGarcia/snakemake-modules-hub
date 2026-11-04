@@ -1,0 +1,28 @@
+from pathlib import Path
+
+
+INPUT_NAME = Path(config["input_file"]).name
+RESULTS_DIR = f"{config['out_dir']}/{config['dataset_name']}"
+LOG_FILE = f"{config['out_dir']}/logs/{config['dataset_name']}.log"
+
+
+rule all:
+    input:
+        RESULTS_DIR
+
+
+rule hmmcleaner:
+    input:
+        alignment=config["input_file"]
+    output:
+        results=directory(RESULTS_DIR)
+    params:
+        input_name=INPUT_NAME,
+        extra_args=config["hmmcleaner"]["extra_args"]
+    log:
+        LOG_FILE
+    threads: 1
+    shell:
+        r"""
+        HmmCleaner.pl {params.input_name:q} --large -profile leave-one-out
+        """

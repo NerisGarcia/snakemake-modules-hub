@@ -1,0 +1,9 @@
+dataset_name: "307627_ncbi_genomes"
+sample_list: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
+# Must match the core_subset config (they define the output directory name).
+core_sample_list: "data/test/genomics/307627_core_samples.txt"
+analysis_sample_list: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
+# Reads and writes {pangenome_dir}/<subset name> (the core_subset output).
+pangenome_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes"
+core_threshold: 0.9
+threads: 8
