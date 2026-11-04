@@ -7,3 +7,10 @@ analysis_sample_list: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
 pangenome_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes"
 core_threshold: 0.9
 threads: 8
+# Genes with at least this many variable columns are cleaned and realigned;
+# the others keep the original Panaroo alignment.
+min_variable_sites: 5
+# Sequences with a larger gap fraction are dropped before realignment.
+gap_seq_max: 0.8
+hmmcleaner:
+  extra_args: "--large -profile=leave-one-out"

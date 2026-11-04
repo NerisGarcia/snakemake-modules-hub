@@ -49,6 +49,7 @@ module_configs = {
         "pangenome_dir": pangenome_dir,
         "core_threshold": threshold,
         "threads": config["threads"],
+        **config["gene_alignment"],
     },
     "core_iqtree": {
         **config["iqtree"],

@@ -24,14 +24,25 @@ run_label = run_name
 core_groups = f"{run_dir}/selected_core_groups.tsv"
 gene_fasta_dir = f"{run_dir}/selected_gene_fastas"
 
+min_variable_sites = config.get("min_variable_sites", 5)
+gap_seq_max = config.get("gap_seq_max", 0.8)
+hmmcleaner_args = (config.get("hmmcleaner") or {}).get(
+    "extra_args", "--large -profile=leave-one-out"
+)
+
+filtered_dir = f"{run_dir}/gappy_filtered"
+removed_dir = f"{run_dir}/removed_sequences"
 mafft_dir = f"{run_dir}/mafft"
-final_alignment_dir = f"{run_dir}/gene_alignments"
+hmmcleaner_dir = f"{run_dir}/hmmcleaner"
+final_alignment_dir = f"{run_dir}/core_gene_aln"
 amas_dir = f"{run_dir}/amas"
 log_dir = f"{run_dir}/logs"
 concat_alignment = f"{run_dir}/{run_label}.gene_alignment.aln"
 partitions_file = f"{amas_dir}/{run_label}.partitions.txt"
 summary_file = f"{amas_dir}/amas_alignment_summary.tsv"
 selected_genes = f"{run_dir}/selected_genes.txt"
+variable_genes = f"{run_dir}/variable_genes.txt"
+constant_genes = f"{run_dir}/constant_genes.txt"
 
 
 rule all:
@@ -65,14 +76,58 @@ checkpoint list_selected_genes:
 
 
 def final_gene_alignments(wildcards):
+    # classify_genes must finish before per-gene inputs are resolved
+    checkpoints.classify_genes.get()
     with open(checkpoints.list_selected_genes.get().output[0]) as handle:
         genes = [line.strip() for line in handle if line.strip()]
     return expand(f"{final_alignment_dir}/{run_name}_{{gene}}.fasta", gene=genes)
 
 
+checkpoint classify_genes:
+    input:
+        genes=selected_genes,
+        gene_fasta_dir=gene_fasta_dir
+    output:
+        variable=variable_genes,
+        constant=constant_genes
+    params:
+        run_name=run_name,
+        min_variable_sites=min_variable_sites
+    log:
+        f"{log_dir}/classify_genes.log"
+    script:
+        "scripts/classify_genes.py"
+
+
+def is_variable(gene):
+    with open(checkpoints.classify_genes.get().output.variable) as handle:
+        return gene in {line.strip() for line in handle}
+
+
+def gene_alignment_source(wildcards):
+    if is_variable(wildcards.gene):
+        return f"{hmmcleaner_dir}/{run_name}_{wildcards.gene}.fasta"
+    return f"{gene_fasta_dir}/{run_name}_{wildcards.gene}.fasta"
+
+
+# Only genes with >= min_variable_sites variable columns are cleaned and realigned.
+rule remove_gappy_sequences:
+    input:
+        alignment=f"{gene_fasta_dir}/{run_name}_{{gene}}.fasta"
+    output:
+        fasta=temp(f"{filtered_dir}/{run_name}_{{gene}}.fasta"),
+        removed=f"{removed_dir}/{{gene}}.tsv"
+    params:
+        gap_seq_max=gap_seq_max
+    log:
+        f"{log_dir}/remove_gappy_sequences/{{gene}}.log"
+    script:
+        "scripts/remove_gappy_sequences.py"
+
+
 rule mafft_per_gene:
     input:
-        fasta=f"{gene_fasta_dir}/{run_name}_{{gene}}.fasta"
+        fasta=f"{filtered_dir}/{run_name}_{{gene}}.fasta"
     output:
         alignment=temp(f"{mafft_dir}/{run_name}_{{gene}}.fasta")
     threads: config["threads"]
@@ -81,12 +136,41 @@ rule mafft_per_gene:
     conda:
         "environment.yaml"
     shell:
-        "mafft --adjustdirection --auto --thread {threads} {input.fasta} > {output.alignment} 2> {log}"
+        # strip the _R_ prefix MAFFT adds to reverse-complemented sequences
+        r"""
+        mafft --adjustdirection --auto --thread {threads} {input.fasta} 2> {log} \
+            | sed 's/^>_R_/>/' > {output.alignment}
+        """
+
+
+# HmmCleaner only works from the alignment's directory and writes its outputs
+# there (<stem>_hmm.*), so each gene runs in its own scratch directory.
+rule hmmcleaner_per_gene:
+    input:
+        alignment=f"{mafft_dir}/{run_name}_{{gene}}.fasta"
+    output:
+        alignment=temp(f"{hmmcleaner_dir}/{run_name}_{{gene}}.fasta")
+    params:
+        extra_args=hmmcleaner_args,
+        work_dir=f"{hmmcleaner_dir}/work_{{gene}}"
+    log:
+        f"{log_dir}/hmmcleaner/{{gene}}.log"
+    conda:
+        "environment.yaml"
+    shell:
+        r"""
+        rm -rf {params.work_dir:q}
+        mkdir -p {params.work_dir:q} "$(dirname {log:q})"
+        cp {input.alignment:q} {params.work_dir:q}/aln.fasta
+        (cd {params.work_dir:q} && HmmCleaner.pl aln.fasta {params.extra_args}) > {log:q} 2>&1
+        mv {params.work_dir:q}/aln_hmm.fasta {output.alignment:q}
+        rm -rf {params.work_dir:q}
+        """
 
 
 rule prepare_gene_alignment:
     input:
-        alignment=f"{mafft_dir}/{run_name}_{{gene}}.fasta",
+        alignment=gene_alignment_source,
         samples=analysis_sample_file
     output:
         alignment=f"{final_alignment_dir}/{run_name}_{{gene}}.fasta"

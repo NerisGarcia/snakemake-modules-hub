@@ -20,6 +20,14 @@ panaroo:
   refind_mode: "default"
   aligner: "mafft"
 
+# Genes with >= min_variable_sites variable columns have sequences with > gap_seq_max gaps removed,
+# are realigned with MAFFT and cleaned with HmmCleaner; the others keep their Panaroo alignment.
+gene_alignment:
+  min_variable_sites: 5
+  gap_seq_max: 0.8
+  hmmcleaner:
+    extra_args: "--large -profile=leave-one-out"
+
 iqtree:
   model: "GTR+I+G"
   bootstrap: 1000
