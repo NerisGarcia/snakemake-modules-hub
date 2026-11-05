@@ -1,0 +1,49 @@
+with open(config["genome_list"]) as handle:
+    samples = [l.strip() for l in handle if l.strip() and not l.lstrip().startswith("#")]
+if not samples:
+    raise ValueError("The genome list is empty")
+
+fasta_dir = config["fasta_dir"]
+results_dir = config["results_dir"]
+annotation_dir = f"{results_dir}/02_annotation"
+quast_output = f"{results_dir}/03_qc/QUAST"
+gtdbtk_out = f"{results_dir}/04_taxonomy/gtdbtk"
+
+wildcard_constraints:
+    sample="[^/]+"
+
+module bakta_module:
+    snakefile: "../../modules/03_gene_annotation/bakta/Snakefile"
+    config:
+        {"assembly_dir": fasta_dir, "annotation_dir": annotation_dir,
+         "bakta_db": config["bakta_db"], "threads": config["threads"]["bakta"]}
+
+module quast_module:
+    snakefile: "../../modules/02_assembly/quast/Snakefile"
+    config:
+        {"annotation_dir": annotation_dir, "quast_output": quast_output,
+         "threads": config["threads"]["quast"]}
+
+module gtdbtk_module:
+    snakefile: "../../modules/07_genome_chaacterization/gtdb-tk_classify_wf/Snakefile"
+    config:
+        {"sample_file": config["genome_list"], "in_dir": fasta_dir,
+         "out_dir": gtdbtk_out, "db_dir": config["gtdbtk_db"],
+         "gtdbtk": config["gtdbtk"], "threads": config["threads"]["gtdbtk"]}
+
+use rule * from bakta_module exclude all, bakta as bakta_*
+
+# bakta reads the input FASTA directly (same files as GTDB-Tk), overriding the module's shovill contigs path
+use rule bakta from bakta_module as bakta_bakta with:
+    input:
+        contigs=lambda wildcards: f"{fasta_dir}/{wildcards.sample}.fna"
+
+use rule * from quast_module exclude all as quast_*
+use rule * from gtdbtk_module exclude all as gtdbtk_*
+
+rule all:
+    default_target: True
+    input:
+        f"{gtdbtk_out}/gtdbtk.bac120.summary.tsv",
+        expand(f"{annotation_dir}/{{sample}}.gff3", sample=samples),
+        expand(f"{quast_output}/{{sample}}.quast.transposed_report.tsv", sample=samples)
