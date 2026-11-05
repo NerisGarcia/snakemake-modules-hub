@@ -1,26 +1,34 @@
+import os
+
 # Modules are fetched from GitHub so the workflow can run from any directory (e.g. a server).
 REPO = "NerisGarcia/snakemake-modules-hub"
 BRANCH = "main"
 
-dataset_name = config["dataset_name"]
-pangenome_dir = config["pangenome_dir"]
-panaroo_config = config["panaroo"]
+# Edit-only workflow: it reads an existing Panaroo run (made by 02_panaroo_tree or the panaroo module)
+dataset_name = config.get("dataset_name") or ""
 subcore_config = config.get("subcore") or {}
 subsample_config = config.get("subsample") or {}
-# Panaroo threshold; the edit step has its own and falls back to this one
-threshold = panaroo_config["core_threshold"]
-subcore_threshold = subcore_config.get("core_threshold") or threshold
+subcore_threshold = subcore_config["core_threshold"]
 
 
 def core_tag(value):
     return f"core_{round(float(value) * 100)}"
 
 
-panaroo_run_name = panaroo_config.get("run_name") or f"panaroo_original.{core_tag(threshold)}"
-panaroo_dir = f"{pangenome_dir}/{panaroo_run_name}"
+# panaroo.dir is the full path of the original run; subset runs are created next to it
+panaroo_dir = config["panaroo"]["dir"].rstrip("/")
+pangenome_dir = os.path.dirname(panaroo_dir)
+panaroo_run_name = os.path.basename(panaroo_dir)
 core_list = subcore_config.get("core_sample_list") or None
 analysis_list = subsample_config.get("analysis_sample_list") or None
-SUBSET = bool(core_list or analysis_list)
+if not (core_list or analysis_list):
+    raise ValueError("Set subcore.core_sample_list and/or subsample.analysis_sample_list")
+for needed in ("gene_presence_absence_roary.csv", "combined_DNA_CDS.fasta", "aligned_gene_sequences"):
+    if not os.path.exists(f"{panaroo_dir}/{needed}"):
+        raise ValueError(
+            f"{panaroo_dir}/{needed} not found: run the Panaroo workflow (02_panaroo_tree) first, "
+            "with alignment 'pan', or fix panaroo.dir"
+        )
 
 # Folder name of the core_subset run, which gene_aln_cleaning writes into too:
 #   core list only -> subcore, analysis list only -> subsamp, both -> subcore_subsamp
@@ -39,19 +47,9 @@ if analysis_list and not subsample_label:
 label = "__".join(part for part in (subcore_label, subsample_label) if part)
 subset_name = f"{subset_prefix}.{label}.{core_tag(subcore_threshold)}"
 subset_dir = f"{pangenome_dir}/{subset_name}"
-core_prefix = f"{panaroo_dir}/iqtree/{panaroo_run_name}.gene_alignment_filtered"
 subset_tree_prefix = f"{subset_dir}/iqtree/{subset_name}.gene_alignment"
 
 module_configs = {
-    "panaroo": {
-        **panaroo_config,
-        "run_name": panaroo_run_name,
-        "sample_list": config["sample_list"],
-        "dataset_name": dataset_name,
-        "annot_dir": config["annot_dir"],
-        "pangenome_dir": pangenome_dir,
-        "threads": config["threads"],
-    },
     "core_subset": {
         "dataset_name": dataset_name,
         "sample_list": config["sample_list"],
@@ -75,12 +73,6 @@ module_configs = {
         "threads": config["threads"],
         **config["gene_aln_cleaning"],
     },
-    "core_iqtree": {
-        **config["iqtree"],
-        "alignment": f"{panaroo_dir}/core_gene_alignment_filtered.aln",
-        "prefix": core_prefix,
-        "threads": config["threads"],
-    },
     "editcore_iqtree": {
         **config["iqtree"],
         "alignment": f"{subset_dir}/{subset_name}.gene_alignment.aln",
@@ -89,65 +81,35 @@ module_configs = {
     },
 }
 
-module panaroo:
+module core_subset:
     snakefile:
-        github(REPO, path="modules/04_pangenome/panaroo/Snakefile", branch=BRANCH)
+        github(REPO, path="modules/04_pangenome/core_subset/Snakefile", branch=BRANCH)
     config:
-        module_configs["panaroo"]
+        module_configs["core_subset"]
 
 
-module core_iqtree:
+module gene_aln_cleaning:
+    snakefile:
+        github(REPO, path="modules/04_pangenome/gene_aln_cleaning/Snakefile", branch=BRANCH)
+    config:
+        module_configs["gene_aln_cleaning"]
+
+
+module editcore_iqtree:
     snakefile:
         github(REPO, path="modules/05_phylogenetics/iqtree/Snakefile", branch=BRANCH)
     config:
-        module_configs["core_iqtree"]
+        module_configs["editcore_iqtree"]
 
 
-if SUBSET:
-    module core_subset:
-        snakefile:
-            github(REPO, path="modules/04_pangenome/core_subset/Snakefile", branch=BRANCH)
-        config:
-            module_configs["core_subset"]
+use rule * from core_subset exclude all as core_subset_*
+use rule * from gene_aln_cleaning exclude all as gene_aln_cleaning_*
+use rule * from editcore_iqtree exclude all as editcore_iqtree_*
 
 
-    module gene_aln_cleaning:
-        snakefile:
-            github(REPO, path="modules/04_pangenome/gene_aln_cleaning/Snakefile", branch=BRANCH)
-        config:
-            module_configs["gene_aln_cleaning"]
-
-
-    module editcore_iqtree:
-        snakefile:
-            github(REPO, path="modules/05_phylogenetics/iqtree/Snakefile", branch=BRANCH)
-        config:
-            module_configs["editcore_iqtree"]
-
-
-use rule * from panaroo exclude all as panaroo_*
-use rule * from core_iqtree exclude all as core_iqtree_*
-
-if SUBSET:
-    use rule * from core_subset exclude all as core_subset_*
-    use rule * from gene_aln_cleaning exclude all as gene_aln_cleaning_*
-    use rule * from editcore_iqtree exclude all as editcore_iqtree_*
-
-
-rule panaroo_core_all:
+rule all:
+    default_target: True
     input:
-        f"{panaroo_dir}/gene_presence_absence.Rtab",
-        f"{panaroo_dir}/gene_presence_absence_roary.csv",
-        f"{panaroo_dir}/combined_DNA_CDS.fasta",
-        f"{panaroo_dir}/core_gene_alignment.aln",
-        f"{panaroo_dir}/core_gene_alignment_filtered.aln",
-        f"{panaroo_dir}/aligned_gene_sequences",
-        f"{panaroo_dir}/{panaroo_run_name}.pangenome_summary.tsv",
-        f"{core_prefix}.treefile"
-
-
-subset_targets = (
-    [
         f"{subset_dir}/gene_presence_absence.selected_samples.csv",
         f"{subset_dir}/selected_core_groups.tsv",
         f"{subset_dir}/sample_selection.tsv",
@@ -157,15 +119,3 @@ subset_targets = (
         f"{subset_dir}/amas/amas_alignment_summary.tsv",
         f"{subset_dir}/{subset_name}.pangenome_summary.tsv",
         f"{subset_tree_prefix}.treefile",
-    ]
-    if SUBSET
-    else []
-)
-
-
-# Without subcore.core_sample_list/subsample.analysis_sample_list this is just the Panaroo stage.
-rule all:
-    default_target: True
-    input:
-        rules.panaroo_core_all.input,
-        subset_targets
