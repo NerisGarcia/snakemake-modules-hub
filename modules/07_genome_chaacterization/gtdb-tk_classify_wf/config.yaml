@@ -1,0 +1,34 @@
+# ---------------------------------------------------------------------------
+# Module config template. Keep these variable names across all modules.
+# Delete sections that do not apply; do not rename the ones you keep.
+# ---------------------------------------------------------------------------
+
+# Name of the dataset (used to name outputs)
+dataset_name: Ravel_lab_isolate_collection
+
+# --- Inputs ----------------------------------------------------------------
+# File with one sample name per line
+sample_file: /Users/ngarcia-gonzalez/Desktop/RESEARCH/snakemake-modules-hub/data/test/genomics/307627_core_samples.txt
+
+# Directory with the input genomes ({sample}.fna), e.g. from the annotation module
+in_dir: /Users/ngarcia-gonzalez/Desktop/RESEARCH/snakemake-modules-hub/data/test/genomics/02_annotation
+
+# --- Outputs ---------------------------------------------------------------
+# Directory where this module stores its results
+out_dir: /Users/ngarcia-gonzalez/Desktop/RESEARCH/snakemake-modules-hub/data/test/genomics/7_genome_characterization/gtdbtk
+
+# --- Databases and references ----------------------------------------------
+# GTDB-Tk reference data directory (exported as GTDBTK_DATA_PATH, ~100 GB)
+db_dir: /Users/ngarcia-gonzalez/Desktop/RESEARCH/snakemake-modules-hub/data/dbs/gtdbtk/release226
+reference_file: null
+
+# --- Tool parameters -------------------------------------------------------
+# Tool-specific options, grouped under the tool name
+gtdbtk:
+  extension: fna          # genome file extension
+  skip_ani_screen: true   # skip mash/ANI pre-screen against GTDB genomes
+  pplacer_cpus: 1         # pplacer is RAM-heavy; keep low
+  extra_args: ""
+
+# --- Threads ---------------------------------------------------------------
+threads: 8
