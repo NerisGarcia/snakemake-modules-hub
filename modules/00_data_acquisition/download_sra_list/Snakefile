@@ -41,7 +41,7 @@ rule prefetch_sra:
         sra = f"{FASTQ_DIR}/{{acc}}/{{acc}}.sra",
         donefile = DONEFILE
     conda:
-        "environment.yaml"
+        "download_sra.yaml"
     shell:
         """
         mkdir -p {params.fastq_dir}
@@ -85,7 +85,7 @@ rule fastq_dump:
         sra = f"{FASTQ_DIR}/{{acc}}/{{acc}}.sra",
         n_reads = config["n_reads"]
     conda:
-        "environment.yaml"
+        "download_sra.yaml"
     shell:
         """
         fastq-dump --gzip --skip-technical --split-3 -X {params.n_reads} --outdir {params.fastq_dir} {input.sra}
