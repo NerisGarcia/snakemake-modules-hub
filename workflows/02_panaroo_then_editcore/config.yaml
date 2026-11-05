@@ -1,34 +1,47 @@
 dataset_name: "307627_ncbi_genomes"
 sample_list: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
-# Optional subsets; use false (or leave empty) when they do not apply. At least one enables the subset stage.
-#   core_sample_list only      -> subcore.{dataset}.{threshold}
-#   analysis_sample_list only  -> core_subsamp.{dataset}.{threshold}
-#   both                       -> subcore_subsamp.{dataset}.{threshold}
-# core_sample_list: samples that define the core genes. analysis_sample_list: samples kept in the outputs.
-core_sample_list: "data/test/genomics/307627_core_samples.txt"
-analysis_sample_list: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
 annot_dir: "data/test/genomics/02_annotation"
-# Results: {pangenome_dir}/core_{core_threshold} (Panaroo) and {pangenome_dir}/<subset name> (see above)
+# Everything goes under pangenome_dir (the dataset folder):
+#   panaroo_original.core_{pct}/   original Panaroo run (pct = panaroo.core_threshold x 100)
+#   <subset name>/                 one folder per subcore/subsample run
 pangenome_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes"
-core_threshold: 0.9
 threads: 8
 
 panaroo:
+  core_threshold: 0.9
+  # run_name: "panaroo_original.core_90"   # optional; default panaroo_original.core_{pct}
   clean_mode: "strict"
   alignment: "pan"
   family_threshold: 0.7
   refind_mode: "default"
   aligner: "mafft"
 
+# Optional subsets; use false (or leave empty) when they do not apply. At least one enables the edit stage.
+# Folder name = {kind}.{label}.core_{pct}, pct = threshold x 100:
+#   subcore.core_sample_list only       -> subcore.{label}.core_80
+#   subsample.analysis_sample_list only -> subsamp.{label}.core_80
+#   both                                -> subcore_subsamp.{subcore label}__{subsample label}.core_80
+# label is required with its list and says what it is. A new label/list/threshold makes a new
+# folder and reuses the existing Panaroo run (it is not run again).
+# subcore.core_threshold is the threshold of the edit step (defaults to panaroo.core_threshold).
+subcore:
+  core_sample_list: "data/test/genomics/307627_core_samples.txt"
+  core_threshold: 0.8
+  label: "isolates_only"   # e.g. core defined from isolates only (no MAGs)
+
+subsample:
+  analysis_sample_list: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
+  label: "all_samples"   # e.g. "cladeA1" for a clade subsample
+
 # Genes with >= min_variable_sites variable columns have sequences with > gap_seq_max gaps removed,
-# are realigned with MAFFT and cleaned with HmmCleaner; the others keep their Panaroo alignment.
-gene_alignment:
+# are realigned with MAFFT and cleaned with HmmCleaner; the others keep their input alignment.
+gene_aln_cleaning:
   min_variable_sites: 5
   gap_seq_max: 0.8
   hmmcleaner:
     extra_args: "--large -profile=leave-one-out"
 
 iqtree:
-  model: "GTR+I+G"
-  bootstrap: 1000
-  fast: false
+  model: "GTR+I+G"   # or "TEST" to pick the best model with ModelFinder
+  bootstrap: 1000    # ignored while fast is true (IQ-TREE cannot combine them)
+  fast: true

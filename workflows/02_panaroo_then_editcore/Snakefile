@@ -3,53 +3,77 @@ REPO = "NerisGarcia/snakemake-modules-hub"
 BRANCH = "main"
 
 dataset_name = config["dataset_name"]
-threshold = config["core_threshold"]
 pangenome_dir = config["pangenome_dir"]
-panaroo_dir = f"{pangenome_dir}/core_{threshold}"
-core_list = config.get("core_sample_list") or None
-analysis_list = config.get("analysis_sample_list") or None
+panaroo_config = config["panaroo"]
+subcore_config = config.get("subcore") or {}
+subsample_config = config.get("subsample") or {}
+# Panaroo threshold; the edit step has its own and falls back to this one
+threshold = panaroo_config["core_threshold"]
+subcore_threshold = subcore_config.get("core_threshold") or threshold
+
+
+def core_tag(value):
+    return f"core_{round(float(value) * 100)}"
+
+
+panaroo_run_name = panaroo_config.get("run_name") or f"panaroo_original.{core_tag(threshold)}"
+panaroo_dir = f"{pangenome_dir}/{panaroo_run_name}"
+core_list = subcore_config.get("core_sample_list") or None
+analysis_list = subsample_config.get("analysis_sample_list") or None
 SUBSET = bool(core_list or analysis_list)
 
-# Same naming as the core_subset and gene_alignment modules:
-#   core list only -> subcore, analysis list only -> core_subsamp, both -> subcore_subsamp
+# Folder name of the core_subset run, which gene_aln_cleaning writes into too:
+#   core list only -> subcore, analysis list only -> subsamp, both -> subcore_subsamp
 subset_prefix = "_".join(
     part for part in (
-        "subcore" if core_list else "core",
+        "subcore" if core_list else "",
         "subsamp" if analysis_list else "",
     ) if part
 )
-subset_name = f"{subset_prefix}.{dataset_name}.{threshold}"
+subcore_label = subcore_config.get("label") or ""
+subsample_label = subsample_config.get("label") or ""
+if core_list and not subcore_label:
+    raise ValueError("Set subcore.label to describe subcore.core_sample_list (e.g. 'isolates_only')")
+if analysis_list and not subsample_label:
+    raise ValueError("Set subsample.label to describe subsample.analysis_sample_list (e.g. 'cladeA1')")
+label = "__".join(part for part in (subcore_label, subsample_label) if part)
+subset_name = f"{subset_prefix}.{label}.{core_tag(subcore_threshold)}"
 subset_dir = f"{pangenome_dir}/{subset_name}"
-core_prefix = f"{panaroo_dir}/iqtree/{dataset_name}.core{threshold}.gene_alignment_filtered"
+core_prefix = f"{panaroo_dir}/iqtree/{panaroo_run_name}.gene_alignment_filtered"
 subset_tree_prefix = f"{subset_dir}/iqtree/{subset_name}.gene_alignment"
 
 module_configs = {
     "panaroo": {
-        **config["panaroo"],
+        **panaroo_config,
+        "run_name": panaroo_run_name,
         "sample_list": config["sample_list"],
         "dataset_name": dataset_name,
         "annot_dir": config["annot_dir"],
         "pangenome_dir": pangenome_dir,
-        "core_threshold": threshold,
         "threads": config["threads"],
     },
     "core_subset": {
         "dataset_name": dataset_name,
         "sample_list": config["sample_list"],
-        "core_sample_list": core_list,
-        "analysis_sample_list": analysis_list,
         "pangenome_dir": pangenome_dir,
-        "core_threshold": threshold,
+        "panaroo": {"run_name": panaroo_run_name},
+        "subcore": {
+            "core_sample_list": core_list,
+            "core_threshold": subcore_threshold,
+            "label": subcore_label,
+        },
+        "subsample": {
+            "analysis_sample_list": analysis_list,
+            "label": subsample_label,
+        },
     },
-    "gene_alignment": {
-        "dataset_name": dataset_name,
-        "sample_list": config["sample_list"],
-        "core_sample_list": core_list,
-        "analysis_sample_list": analysis_list,
-        "pangenome_dir": pangenome_dir,
-        "core_threshold": threshold,
+    "gene_aln_cleaning": {
+        "alignment_list": f"{subset_dir}/selected_alignments.txt",
+        "sample_list": f"{subset_dir}/analysis_samples.txt",
+        "output_dir": subset_dir,
+        "prefix": subset_name,
         "threads": config["threads"],
-        **config["gene_alignment"],
+        **config["gene_aln_cleaning"],
     },
     "core_iqtree": {
         **config["iqtree"],
@@ -87,11 +111,11 @@ if SUBSET:
             module_configs["core_subset"]
 
 
-    module gene_alignment:
+    module gene_aln_cleaning:
         snakefile:
-            github(REPO, path="modules/04_pangenome/gene_alignment/Snakefile", branch=BRANCH)
+            github(REPO, path="modules/04_pangenome/gene_aln_cleaning/Snakefile", branch=BRANCH)
         config:
-            module_configs["gene_alignment"]
+            module_configs["gene_aln_cleaning"]
 
 
     module editcore_iqtree:
@@ -106,7 +130,7 @@ use rule * from core_iqtree exclude all as core_iqtree_*
 
 if SUBSET:
     use rule * from core_subset exclude all as core_subset_*
-    use rule * from gene_alignment exclude all as gene_alignment_*
+    use rule * from gene_aln_cleaning exclude all as gene_aln_cleaning_*
     use rule * from editcore_iqtree exclude all as editcore_iqtree_*
 
 
@@ -118,7 +142,7 @@ rule panaroo_core_all:
         f"{panaroo_dir}/core_gene_alignment.aln",
         f"{panaroo_dir}/core_gene_alignment_filtered.aln",
         f"{panaroo_dir}/aligned_gene_sequences",
-        f"{panaroo_dir}/{dataset_name}.core{threshold}.pangenome_summary.tsv",
+        f"{panaroo_dir}/{panaroo_run_name}.pangenome_summary.tsv",
         f"{core_prefix}.treefile"
 
 
@@ -127,6 +151,7 @@ subset_targets = (
         f"{subset_dir}/gene_presence_absence.selected_samples.csv",
         f"{subset_dir}/selected_core_groups.tsv",
         f"{subset_dir}/sample_selection.tsv",
+        f"{subset_dir}/params.txt",
         f"{subset_dir}/{subset_name}.gene_alignment.aln",
         f"{subset_dir}/amas/{subset_name}.partitions.txt",
         f"{subset_dir}/amas/amas_alignment_summary.tsv",
@@ -138,7 +163,7 @@ subset_targets = (
 )
 
 
-# Without core_sample_list/analysis_sample_list this is just the Panaroo stage.
+# Without subcore.core_sample_list/subsample.analysis_sample_list this is just the Panaroo stage.
 rule all:
     default_target: True
     input:

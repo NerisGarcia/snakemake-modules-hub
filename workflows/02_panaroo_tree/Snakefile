@@ -17,12 +17,12 @@ RESULTS_DIR = config["genomics_results_dir"]
 DATASET_NAME = config["dataset_name"]
 CORE_DIR = f"{RESULTS_DIR}/04_pangenome/{DATASET_NAME}"
 CORE_THRESHOLD = config["panaroo"]["core_threshold"]
-PANAROO_DIR = f"{CORE_DIR}/core_{CORE_THRESHOLD}"
-CORE_PREFIX = f"core{CORE_THRESHOLD}"
+CORE_PREFIX = config["panaroo"].get("run_name") or f"panaroo_original.core_{round(float(CORE_THRESHOLD) * 100)}"
+PANAROO_DIR = f"{CORE_DIR}/{CORE_PREFIX}"
 
 GFF_PATHS = f"{CORE_DIR}/gff_paths.txt"
-SUMMARY_FILE = f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.pangenome_summary.tsv"
-IQTREE_PREFIX = f"{PANAROO_DIR}/iqtree/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered"
+SUMMARY_FILE = f"{PANAROO_DIR}/{CORE_PREFIX}.pangenome_summary.tsv"
+IQTREE_PREFIX = f"{PANAROO_DIR}/iqtree/{CORE_PREFIX}.gene_alignment_filtered"
 
 
 rule all:
@@ -108,10 +108,10 @@ rule rename_core_files:
         core_aln_filtered_head=f"{PANAROO_DIR}/core_alignment_filtered_header.embl",
         core_aln_head=f"{PANAROO_DIR}/core_alignment_header.embl"
     output:
-        core_alignment=f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment.aln",
-        core_aln_filtered=f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.aln",
-        core_aln_filtered_head=f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.alignment_filtered_header.embl",
-        core_aln_head=f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.alignment_header.embl"
+        core_alignment=f"{PANAROO_DIR}/{CORE_PREFIX}.gene_alignment.aln",
+        core_aln_filtered=f"{PANAROO_DIR}/{CORE_PREFIX}.gene_alignment_filtered.aln",
+        core_aln_filtered_head=f"{PANAROO_DIR}/{CORE_PREFIX}.alignment_filtered_header.embl",
+        core_aln_head=f"{PANAROO_DIR}/{CORE_PREFIX}.alignment_header.embl"
     shell:
         r'''
         mv {input.core_alignment} {output.core_alignment}
@@ -122,12 +122,12 @@ rule rename_core_files:
 
 rule prepare_tree_filtered:
     input:
-        core_aln_filtered  = f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.aln",    
+        core_aln_filtered  = f"{PANAROO_DIR}/{CORE_PREFIX}.gene_alignment_filtered.aln",    
     output:
-        vcf = f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.vcf",
-        dist =  f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.fasta.DM",
-        snp_fasta = f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.SNPs.fasta",
-        fconts_file = f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.fconst.txt",
+        vcf = f"{PANAROO_DIR}/{CORE_PREFIX}.gene_alignment_filtered.vcf",
+        dist =  f"{PANAROO_DIR}/{CORE_PREFIX}.gene_alignment_filtered.fasta.DM",
+        snp_fasta = f"{PANAROO_DIR}/{CORE_PREFIX}.gene_alignment_filtered.SNPs.fasta",
+        fconts_file = f"{PANAROO_DIR}/{CORE_PREFIX}.gene_alignment_filtered.fconst.txt",
     conda:
         "panaroo_env"
     threads: config["threads"]
@@ -149,22 +149,29 @@ rule prepare_tree_filtered:
 
 rule iqtree_tree_filtered:
     input:
-        snp_fasta = f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.SNPs.fasta",
-        fconts_file = f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.fconst.txt",
+        snp_fasta = f"{PANAROO_DIR}/{CORE_PREFIX}.gene_alignment_filtered.SNPs.fasta",
+        fconts_file = f"{PANAROO_DIR}/{CORE_PREFIX}.gene_alignment_filtered.fconst.txt",
     output:
         tree_file =  f"{IQTREE_PREFIX}.treefile"
     conda:
         "panaroo_env"
     params:
         model = config["iqtree"]["model"],
-        bootstrap = config["iqtree"]["bootstrap"],
+        bootstrap = config["iqtree"].get("bootstrap", 0),
+        fast = config["iqtree"].get("fast", False),
         threads = config["threads"],
         prefix = f"{IQTREE_PREFIX}"
 
     shell:
         r'''
         fconstsvar=$(cat {input.fconts_file})
-        iqtree -s {input.snp_fasta} -m {params.model} -B {params.bootstrap} -nt {params.threads} --redo -fconst $fconstsvar --prefix {params.prefix}
+        # IQ-TREE cannot combine --fast with ultrafast bootstrap
+        if [ "{params.fast}" = "True" ]; then
+            tree_opts="--fast"
+        else
+            tree_opts="-B {params.bootstrap}"
+        fi
+        iqtree -s {input.snp_fasta} -m {params.model} $tree_opts -nt {params.threads} --redo -fconst $fconstsvar --prefix {params.prefix}
 
         '''
 
@@ -172,7 +179,7 @@ rule iqtree_tree_filtered:
 rule pangenome_summary:
     input:
         rtab=f"{PANAROO_DIR}/gene_presence_absence.Rtab",
-        alignment=f"{PANAROO_DIR}/{DATASET_NAME}.{CORE_PREFIX}.gene_alignment_filtered.aln"
+        alignment=f"{PANAROO_DIR}/{CORE_PREFIX}.gene_alignment_filtered.aln"
     output:
         summary=SUMMARY_FILE
     params:

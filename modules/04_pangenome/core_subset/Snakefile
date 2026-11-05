@@ -1,3 +1,4 @@
+import hashlib
 import os
 
 
@@ -16,29 +17,45 @@ def read_unique_sample_list(path, label):
 
 
 sample_file = config["sample_list"]
-core_list = config.get("core_sample_list") or None
-analysis_list = config.get("analysis_sample_list") or None
+subcore_config = config.get("subcore") or {}
+subsample_config = config.get("subsample") or {}
+core_list = subcore_config.get("core_sample_list") or None
+analysis_list = subsample_config.get("analysis_sample_list") or None
 # Lists that do not apply fall back to the full dataset
 core_sample_file = core_list or sample_file
 analysis_sample_file = analysis_list or sample_file
 dataset_name = config["dataset_name"]
 pangenome_dir = config["pangenome_dir"]
-core_threshold = config["core_threshold"]
-panaroo_dir = f"{pangenome_dir}/core_{core_threshold}"
+core_threshold = subcore_config["core_threshold"]
+# Folder of the original Panaroo run, e.g. panaroo_original.core_90
+panaroo_run_name = config["panaroo"]["run_name"]
+panaroo_dir = f"{pangenome_dir}/{panaroo_run_name}"
 
 # Run name encodes which lists were given (false/empty = not applied):
-#   core list only -> subcore, analysis list only -> core_subsamp, both -> subcore_subsamp
+#   core list only -> subcore, analysis list only -> subsamp, both -> subcore_subsamp
 if not (core_list or analysis_list):
-    raise ValueError("Set core_sample_list and/or analysis_sample_list")
+    raise ValueError("Set subcore.core_sample_list and/or subsample.analysis_sample_list")
 prefix = "_".join(
     part for part in (
-        "subcore" if core_list else "core",
+        "subcore" if core_list else "",
         "subsamp" if analysis_list else "",
     ) if part
 )
-run_name = f"{prefix}.{dataset_name}.{core_threshold}"
+def core_tag(value):
+    return f"core_{round(float(value) * 100)}"
+
+
+# Labels say what each list is (e.g. "isolates_only", "cladeA1"); they are required with their list
+subcore_label = subcore_config.get("label") or ""
+subsample_label = subsample_config.get("label") or ""
+if core_list and not subcore_label:
+    raise ValueError("Set subcore.label to describe subcore.core_sample_list")
+if analysis_list and not subsample_label:
+    raise ValueError("Set subsample.label to describe subsample.analysis_sample_list")
+label = "__".join(part for part in (subcore_label, subsample_label) if part)
+run_name = f"{prefix}.{label}.{core_tag(core_threshold)}"
 run_dir = f"{pangenome_dir}/{run_name}"
-# Produced by the gene_alignment module
+# Produced by the gene_aln_cleaning module
 summary_alignment = f"{run_dir}/{run_name}.gene_alignment.aln"
 summary_file = f"{run_dir}/{run_name}.pangenome_summary.tsv"
 
@@ -56,6 +73,40 @@ for label, selected in (
             f"{label} contains samples not in sample_list: " + ", ".join(outside_dataset)
         )
 
+def file_md5(path):
+    with open(path, "rb") as handle:
+        return hashlib.md5(handle.read()).hexdigest()
+
+
+# Written once per run folder; later runs must match it, so a reused label cannot mix results
+params_file = f"{run_dir}/params.txt"
+params_text = "\n".join(
+    [
+        f"run_name: {run_name}",
+        f"dataset_name: {dataset_name}",
+        f"panaroo_run: {panaroo_run_name}",
+        f"subcore_label: {subcore_label or 'NA'}",
+        f"subcore_core_threshold: {core_threshold}",
+        f"core_sample_list: {core_list or 'NA'}",
+        f"core_sample_list_md5: {file_md5(core_list) if core_list else 'NA'}",
+        f"core_samples: {len(core_samples)}",
+        f"subsample_label: {subsample_label or 'NA'}",
+        f"analysis_sample_list: {analysis_list or 'NA'}",
+        f"analysis_sample_list_md5: {file_md5(analysis_list) if analysis_list else 'NA'}",
+        f"analysis_samples: {len(analysis_samples)}",
+        f"sample_list: {sample_file}",
+        f"sample_list_md5: {file_md5(sample_file)}",
+        "",
+    ]
+)
+if os.path.exists(params_file):
+    with open(params_file) as handle:
+        if handle.read() != params_text:
+            raise ValueError(
+                f"{run_dir} was created with different settings (see {params_file}). "
+                "Use a new label or threshold, or delete that folder to rebuild it."
+            )
+
 panaroo_rtab = f"{panaroo_dir}/gene_presence_absence.Rtab"
 panaroo_roary = f"{panaroo_dir}/gene_presence_absence_roary.csv"
 panaroo_combined_cds = f"{panaroo_dir}/combined_DNA_CDS.fasta"
@@ -68,6 +119,9 @@ filtered_roary = f"{run_dir}/gene_presence_absence.selected_samples.csv"
 core_groups = f"{run_dir}/selected_core_groups.tsv"
 sample_log = f"{run_dir}/sample_selection.tsv"
 gene_fastas = f"{run_dir}/selected_gene_fastas"
+# Inputs for gene_aln_cleaning
+alignment_list = f"{run_dir}/selected_alignments.txt"
+analysis_sample_out = f"{run_dir}/analysis_samples.txt"
 log_dir = f"{run_dir}/logs"
 
 
@@ -76,7 +130,19 @@ rule all:
         filtered_roary,
         core_groups,
         sample_log,
+        alignment_list,
+        analysis_sample_out,
+        params_file,
         summary_file
+
+
+rule write_run_params:
+    output:
+        params_file
+    run:
+        os.makedirs(os.path.dirname(output[0]), exist_ok=True)
+        with open(output[0], "w") as handle:
+            handle.write(params_text)
 
 
 rule validate_existing_panaroo:
@@ -124,6 +190,32 @@ rule select_custom_core_groups:
         f"{log_dir}/select_custom_core_groups.log"
     script:
         "scripts/select_core_groups.py"
+
+
+# Paths of the selected gene alignments and the ordered analysis samples,
+# the inputs of the gene_aln_cleaning module
+rule write_gene_aln_cleaning_inputs:
+    input:
+        core_groups=core_groups,
+        gene_fastas=gene_fastas
+    output:
+        alignment_list=alignment_list,
+        analysis_samples=analysis_sample_out
+    run:
+        with open(input.core_groups) as handle:
+            header = next(handle).rstrip("\n").split("\t")
+            id_col, status_col = header.index("File_ID"), header.index("Status")
+            paths = [
+                f"{input.gene_fastas}/{fields[id_col]}.fasta"
+                for fields in (line.rstrip("\n").split("\t") for line in handle)
+                if len(fields) > status_col and fields[status_col] == "selected"
+            ]
+        if not paths:
+            raise ValueError("No selected core gene families have usable sequences")
+        with open(output.alignment_list, "w") as out:
+            out.write("\n".join(paths) + "\n")
+        with open(output.analysis_samples, "w") as out:
+            out.write("\n".join(analysis_samples) + "\n")
 
 
 rule pangenome_summary:

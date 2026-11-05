@@ -20,5 +20,6 @@ panaroo:
   aligner: "mafft"
 
 iqtree:
-  model: "GTR+I+G"
-  bootstrap: 1000
+  model: "GTR+I+G"   # or "TEST" to pick the best model with ModelFinder
+  bootstrap: 1000    # ignored while fast is true (IQ-TREE cannot combine them)
+  fast: true

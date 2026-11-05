@@ -13,10 +13,12 @@ if not SAMPLES:
 annot_dir = config["annot_dir"]
 pangenome_dir = config["pangenome_dir"]
 core_threshold = config["core_threshold"]
-panaroo_dir = f"{pangenome_dir}/core_{core_threshold}"
+# Output folder and file prefix, e.g. panaroo_original.core_90 (override with run_name)
+run_name = config.get("run_name") or f"panaroo_original.core_{round(float(core_threshold) * 100)}"
+panaroo_dir = f"{pangenome_dir}/{run_name}"
 log_dir = f"{panaroo_dir}/logs"
 gff_paths = f"{pangenome_dir}/gff_paths.txt"
-summary_file = f"{panaroo_dir}/{config['dataset_name']}.core{core_threshold}.pangenome_summary.tsv"
+summary_file = f"{panaroo_dir}/{run_name}.pangenome_summary.tsv"
 
 
 rule all:

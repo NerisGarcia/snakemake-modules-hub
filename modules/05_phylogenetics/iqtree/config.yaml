@@ -1,9 +1,11 @@
 # Alignment to build the tree from (core gene alignment, FASTA).
-alignment: "data/test/genomics/04_pangenome/307627_ncbi_genomes/core_0.9/core_gene_alignment_filtered.aln"
+alignment: "data/test/genomics/04_pangenome/307627_ncbi_genomes/panaroo_original.core_90/core_gene_alignment_filtered.aln"
 # Output prefix; produces {prefix}.vcf, .fasta.DM, .SNPs.fasta, .fconst.txt, .treefile, .iqtree
-prefix: "data/test/genomics/04_pangenome/307627_ncbi_genomes/core_0.9/iqtree/307627_ncbi_genomes.core0.9.gene_alignment_filtered"
+prefix: "data/test/genomics/04_pangenome/307627_ncbi_genomes/panaroo_original.core_90/iqtree/panaroo_original.core_90.gene_alignment_filtered"
 threads: 8
+# Substitution model; "TEST" runs ModelFinder first and uses the best model (reported in {prefix}.iqtree)
 model: "GTR+I+G"
+# Ultrafast bootstrap replicates; ignored when fast is true (IQ-TREE cannot combine them)
 bootstrap: 1000
-# true adds IQ-TREE's --fast search
-fast: false
+# true adds IQ-TREE's --fast search and skips bootstrap
+fast: true

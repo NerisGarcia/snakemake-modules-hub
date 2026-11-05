@@ -34,13 +34,12 @@ def count_variable_columns(sequences):
     return variable
 
 
-with open(snakemake.input.genes) as handle:
-    genes = [line.strip() for line in handle if line.strip()]
+with open(snakemake.input.manifest) as handle:
+    alignments = dict(line.rstrip("\n").split("\t") for line in handle if line.strip())
 
 min_sites = int(snakemake.params.min_variable_sites)
 variable, constant = [], []
-for gene in genes:
-    path = f"{snakemake.input.gene_fasta_dir}/{snakemake.params.run_name}_{gene}.fasta"
+for gene, path in alignments.items():
     records = read_fasta(path)
     n_sites = count_variable_columns(list(records.values())) if records else 0
     (variable if n_sites >= min_sites else constant).append(gene)

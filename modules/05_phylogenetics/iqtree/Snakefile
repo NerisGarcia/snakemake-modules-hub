@@ -2,8 +2,11 @@ alignment = config["alignment"]
 prefix = config["prefix"]
 log_dir = f"{prefix}_logs"
 model = config["model"]
-bootstrap = config["bootstrap"]
-fast_flag = "--fast" if config.get("fast", False) else ""
+bootstrap = config.get("bootstrap", 0)
+fast = bool(config.get("fast", False))
+# IQ-TREE cannot combine --fast with ultrafast bootstrap, so --fast runs without -B
+fast_flag = "--fast" if fast else ""
+bootstrap_flag = f"-B {bootstrap}" if bootstrap and not fast else ""
 
 
 rule all:
@@ -47,7 +50,7 @@ rule iqtree_tree:
         report=f"{prefix}.iqtree"
     params:
         model=model,
-        bootstrap=bootstrap,
+        bootstrap=bootstrap_flag,
         fast=fast_flag,
         prefix=prefix
     threads: config["threads"]
@@ -59,7 +62,7 @@ rule iqtree_tree:
         r"""
         mkdir -p "$(dirname "{params.prefix}")"
         fconstsvar=$(cat "{input.fconst_file}")
-        iqtree -s "{input.snp_fasta}" -m "{params.model}" -B "{params.bootstrap}" {params.fast} \
+        iqtree -s "{input.snp_fasta}" -m "{params.model}" {params.bootstrap} {params.fast} \
             -nt {threads} --redo -fconst "$fconstsvar" --prefix "{params.prefix}" > {log} 2>&1
         rm -f "{params.prefix}.ckp.gz"
         """

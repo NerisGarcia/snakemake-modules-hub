@@ -1,28 +1,11 @@
 import os
 
-dataset_name = config["dataset_name"]
-pangenome_dir = config["pangenome_dir"]
-core_threshold = config["core_threshold"]
-core_list = config.get("core_sample_list") or None
-analysis_list = config.get("analysis_sample_list") or None
-analysis_sample_file = analysis_list or config["sample_list"]
-
-# Run name encodes which lists were given (false/empty = not applied):
-#   core list only -> subcore, analysis list only -> core_subsamp, both -> subcore_subsamp
-if not (core_list or analysis_list):
-    raise ValueError("Set core_sample_list and/or analysis_sample_list")
-prefix = "_".join(
-    part for part in (
-        "subcore" if core_list else "core",
-        "subsamp" if analysis_list else "",
-    ) if part
-)
-# Must match the core_subset module
-run_name = f"{prefix}.{dataset_name}.{core_threshold}"
-run_dir = f"{pangenome_dir}/{run_name}"
-run_label = run_name
-core_groups = f"{run_dir}/selected_core_groups.tsv"
-gene_fasta_dir = f"{run_dir}/selected_gene_fastas"
+# One FASTA alignment path per line; the gene ID is the file name without its last extension.
+alignment_list = config["alignment_list"]
+# Samples (and order) of the final alignment; genes missing a sample are padded with gaps.
+sample_list = config["sample_list"]
+output_dir = config["output_dir"]
+prefix = config["prefix"]
 
 min_variable_sites = config.get("min_variable_sites", 5)
 gap_seq_max = config.get("gap_seq_max", 0.8)
@@ -30,19 +13,19 @@ hmmcleaner_args = (config.get("hmmcleaner") or {}).get(
     "extra_args", "--large -profile=leave-one-out"
 )
 
-filtered_dir = f"{run_dir}/gappy_filtered"
-removed_dir = f"{run_dir}/removed_sequences"
-mafft_dir = f"{run_dir}/mafft"
-hmmcleaner_dir = f"{run_dir}/hmmcleaner"
-final_alignment_dir = f"{run_dir}/core_gene_aln"
-amas_dir = f"{run_dir}/amas"
-log_dir = f"{run_dir}/logs"
-concat_alignment = f"{run_dir}/{run_label}.gene_alignment.aln"
-partitions_file = f"{amas_dir}/{run_label}.partitions.txt"
+manifest_file = f"{output_dir}/gene_alignments.tsv"
+filtered_dir = f"{output_dir}/gappy_filtered"
+removed_dir = f"{output_dir}/removed_sequences"
+mafft_dir = f"{output_dir}/mafft"
+hmmcleaner_dir = f"{output_dir}/hmmcleaner"
+final_alignment_dir = f"{output_dir}/cleaned_gene_alignments"
+amas_dir = f"{output_dir}/amas"
+log_dir = f"{output_dir}/logs"
+concat_alignment = f"{output_dir}/{prefix}.gene_alignment.aln"
+partitions_file = f"{amas_dir}/{prefix}.partitions.txt"
 summary_file = f"{amas_dir}/amas_alignment_summary.tsv"
-selected_genes = f"{run_dir}/selected_genes.txt"
-variable_genes = f"{run_dir}/variable_genes.txt"
-constant_genes = f"{run_dir}/constant_genes.txt"
+variable_genes = f"{output_dir}/variable_genes.txt"
+constant_genes = f"{output_dir}/constant_genes.txt"
 
 
 rule all:
@@ -52,46 +35,56 @@ rule all:
         summary_file
 
 
-checkpoint list_selected_genes:
+# The list may be produced by another rule, so it is read only after it exists.
+checkpoint read_alignment_list:
     input:
-        core_groups=core_groups,
-        gene_fasta_dir=gene_fasta_dir
+        alignment_list=alignment_list
     output:
-        selected_genes
+        manifest_file
     log:
-        f"{log_dir}/list_selected_genes.log"
+        f"{log_dir}/read_alignment_list.log"
     run:
-        with open(input.core_groups) as handle:
-            header = next(handle).rstrip("\n").split("\t")
-            gene_col, status_col = header.index("Gene"), header.index("Status")
-            genes = [
-                fields[gene_col]
-                for fields in (line.rstrip("\n").split("\t") for line in handle)
-                if len(fields) > status_col and fields[status_col] == "selected"
-            ]
+        genes = {}
+        with open(input.alignment_list) as handle:
+            for line in handle:
+                path = line.strip()
+                if not path or path.startswith("#"):
+                    continue
+                gene = os.path.splitext(os.path.basename(path))[0]
+                if gene in genes:
+                    raise ValueError(f"Duplicate gene ID {gene}: {genes[gene]} and {path}")
+                if not os.path.isfile(path):
+                    raise FileNotFoundError(f"Alignment not found: {path}")
+                genes[gene] = path
         if not genes:
-            raise ValueError("No selected core gene families have usable sequences")
+            raise ValueError(f"No alignments listed in {input.alignment_list}")
+        os.makedirs(os.path.dirname(output[0]), exist_ok=True)
         with open(output[0], "w") as out:
-            out.write("\n".join(genes) + "\n")
+            out.writelines(f"{gene}\t{path}\n" for gene, path in genes.items())
+
+
+def alignment_paths():
+    with open(checkpoints.read_alignment_list.get().output[0]) as handle:
+        return dict(line.rstrip("\n").split("\t") for line in handle if line.strip())
+
+
+def source_alignment(wildcards):
+    return alignment_paths()[wildcards.gene]
 
 
 def final_gene_alignments(wildcards):
     # classify_genes must finish before per-gene inputs are resolved
     checkpoints.classify_genes.get()
-    with open(checkpoints.list_selected_genes.get().output[0]) as handle:
-        genes = [line.strip() for line in handle if line.strip()]
-    return expand(f"{final_alignment_dir}/{run_name}_{{gene}}.fasta", gene=genes)
+    return expand(f"{final_alignment_dir}/{{gene}}.fasta", gene=list(alignment_paths()))
 
 
 checkpoint classify_genes:
     input:
-        genes=selected_genes,
-        gene_fasta_dir=gene_fasta_dir
+        manifest=manifest_file
     output:
         variable=variable_genes,
         constant=constant_genes
     params:
-        run_name=run_name,
         min_variable_sites=min_variable_sites
     log:
         f"{log_dir}/classify_genes.log"
@@ -106,16 +99,16 @@ def is_variable(gene):
 
 def gene_alignment_source(wildcards):
     if is_variable(wildcards.gene):
-        return f"{hmmcleaner_dir}/{run_name}_{wildcards.gene}.fasta"
-    return f"{gene_fasta_dir}/{run_name}_{wildcards.gene}.fasta"
+        return f"{hmmcleaner_dir}/{wildcards.gene}.fasta"
+    return source_alignment(wildcards)
 
 
 # Only genes with >= min_variable_sites variable columns are cleaned and realigned.
 rule remove_gappy_sequences:
     input:
-        alignment=f"{gene_fasta_dir}/{run_name}_{{gene}}.fasta"
+        alignment=source_alignment
     output:
-        fasta=temp(f"{filtered_dir}/{run_name}_{{gene}}.fasta"),
+        fasta=temp(f"{filtered_dir}/{{gene}}.fasta"),
         removed=f"{removed_dir}/{{gene}}.tsv"
     params:
         gap_seq_max=gap_seq_max
@@ -127,9 +120,9 @@ rule remove_gappy_sequences:
 
 rule mafft_per_gene:
     input:
-        fasta=f"{filtered_dir}/{run_name}_{{gene}}.fasta"
+        fasta=f"{filtered_dir}/{{gene}}.fasta"
     output:
-        alignment=temp(f"{mafft_dir}/{run_name}_{{gene}}.fasta")
+        alignment=temp(f"{mafft_dir}/{{gene}}.fasta")
     threads: config["threads"]
     log:
         f"{log_dir}/mafft/{{gene}}.log"
@@ -147,9 +140,9 @@ rule mafft_per_gene:
 # there (<stem>_hmm.*), so each gene runs in its own scratch directory.
 rule hmmcleaner_per_gene:
     input:
-        alignment=f"{mafft_dir}/{run_name}_{{gene}}.fasta"
+        alignment=f"{mafft_dir}/{{gene}}.fasta"
     output:
-        alignment=temp(f"{hmmcleaner_dir}/{run_name}_{{gene}}.fasta")
+        alignment=temp(f"{hmmcleaner_dir}/{{gene}}.fasta")
     params:
         extra_args=hmmcleaner_args,
         work_dir=f"{hmmcleaner_dir}/work_{{gene}}"
@@ -169,9 +162,9 @@ rule hmmcleaner_per_gene:
 rule prepare_gene_alignment:
     input:
         alignment=gene_alignment_source,
-        samples=analysis_sample_file
+        samples=sample_list
     output:
-        alignment=f"{final_alignment_dir}/{run_name}_{{gene}}.fasta"
+        alignment=f"{final_alignment_dir}/{{gene}}.fasta"
     log:
         f"{log_dir}/prepare_gene_alignment/{{gene}}.log"
     script:
