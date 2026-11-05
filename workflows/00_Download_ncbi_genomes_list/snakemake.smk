@@ -35,7 +35,7 @@ rule download_genomes_dehydrated:
 	shell:
 		"""
 		mkdir -p {params.dir}
-		datasets download genome accession --inputfile {input} --dehydrated --filename {output} {params.include_gff3} --assembly-source all --assembly-version all
+		datasets download genome accession --inputfile {input} --dehydrated --filename {output} {params.include_gff3} --exclude-atypical=false
 		"""
 
 
