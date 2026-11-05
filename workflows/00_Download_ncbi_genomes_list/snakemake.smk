@@ -1,4 +1,3 @@
-configfile: "Download_ncbi_genomes_list/config.yml"
 
 ACCESSIONS_FILE = config.get("accessions_file")
 DATASET_DIR = config.get("dataset_out_dir")

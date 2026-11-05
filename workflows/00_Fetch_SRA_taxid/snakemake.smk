@@ -1,4 +1,3 @@
-configfile: "Fetch_SRA_taxid/config.yml"
 
 TAXID = config.get("taxid")
 DATASET_DIR = config.get("dataset_out_dir")

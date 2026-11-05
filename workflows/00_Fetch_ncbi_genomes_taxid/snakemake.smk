@@ -1,4 +1,3 @@
-configfile: "Fetch_ncbi_genomes_taxid/config.yml"
 
 TAXID = config.get("taxid")
 DATASET_DIR = config.get("dataset_out_dir")
