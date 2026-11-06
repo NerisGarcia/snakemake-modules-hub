@@ -1,21 +1,18 @@
-
-# One SRA accession per line.
-genome_acc_list: "data/test/307627_ncbi_genomes_accessions.txt"
-
-# FASTQ files must be named {accession}_1.fastq.gz and {accession}_2.fastq.gz.
-ass_dir: "data/test/Wporifererum_ncbi_fna"
+# One full fasta path per line (.fna/.fa/.fasta/.fas, optionally .gz).
+# Sample name = basename without the extension.
+genome_list: "data/test/genome_paths.txt"
 
 genomics_results_dir: "data/test"
-
 summary_table: "data/test/Wporifererum_ncbi.pipeline_summary.tsv"
 
-bakta_db: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/bakta/27apr2026/db-light"
-checkm2_db: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/checkm2/CheckM2_database/uniref100.KO.1.dmnd"
+# Set these to paths that exist on the machine you run on
+bakta_db: "/path/to/bakta/db-light"
+checkm2_db: "/path/to/CheckM2_database/uniref100.KO.1.dmnd"
 
 busco_lineage: "bacteria_odb12"
 
 threads:
-  fastp: 16
-  shovill: 16
   bakta: 4
+  busco: 8
+  quast: 16
   checkm2: 8

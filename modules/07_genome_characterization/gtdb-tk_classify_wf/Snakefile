@@ -1,0 +1,50 @@
+import os
+
+out_dir = config["out_dir"]
+db_dir = config["db_dir"]
+gtdbtk_cfg = config["gtdbtk"]
+
+EXTS = (".fasta", ".fna", ".fa", ".fas", ".fasta.gz", ".fna.gz", ".fa.gz")
+
+def sample_name(path):
+    base = os.path.basename(path)
+    for ext in EXTS:
+        if base.endswith(ext):
+            return base[: -len(ext)]
+    raise ValueError(f"Unrecognised fasta extension: {path}")
+
+with open(config["genome_list"]) as handle:
+    genome_paths = [l.strip() for l in handle if l.strip() and not l.lstrip().startswith("#")]
+
+rule gtdbtk_batchfile:
+    input:
+        genome_paths
+    output:
+        batch=f"{out_dir}/batchfile.tsv"
+    run:
+        os.makedirs(out_dir, exist_ok=True)
+        with open(output.batch, "w") as out:
+            for p in input:
+                out.write(f"{os.path.abspath(p)}\t{sample_name(p)}\n")
+
+rule gtdbtk_classify:
+    input:
+        batch=f"{out_dir}/batchfile.tsv"
+    output:
+        summary=f"{out_dir}/gtdbtk.bac120.summary.tsv"
+    params:
+        out_dir=out_dir,
+        db=db_dir,
+        skip_ani="--skip_ani_screen" if gtdbtk_cfg["skip_ani_screen"] else "",
+        pplacer_cpus=gtdbtk_cfg["pplacer_cpus"],
+        extra=gtdbtk_cfg["extra_args"]
+    threads: config["threads"]
+    conda:
+        "envs/cenv.gtdbtk.yaml"
+    shell:
+        """
+        export GTDBTK_DATA_PATH="{params.db}"
+        gtdbtk classify_wf --batchfile "{input.batch}" --out_dir "{params.out_dir}" \
+            --cpus {threads} --pplacer_cpus {params.pplacer_cpus} \
+            {params.skip_ani} {params.extra}
+        """

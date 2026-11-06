@@ -1,9 +1,31 @@
-assembly_dir = config["assembly_dir"]
+import os
+
 annotation_dir = config["annotation_dir"]
 bakta_db = config["bakta_db"]
 
+EXTENSIONS = (".fasta", ".fna", ".fa", ".fas", ".fasta.gz", ".fna.gz", ".fa.gz")
+
+def sample_name(path):
+    base = os.path.basename(path)
+    for ext in EXTENSIONS:
+        if base.endswith(ext):
+            return base[: -len(ext)]
+    raise ValueError(f"Unrecognised fasta extension: {path}")
+
+# Optional: a file with one fasta path per line. Without it, fall back to shovill contigs in assembly_dir.
+GENOMES = {}
+if config.get("genomes_list"):
+    with open(config["genomes_list"]) as handle:
+        paths = [l.strip() for l in handle if l.strip() and not l.lstrip().startswith("#")]
+    GENOMES = {sample_name(p): p for p in paths}
+    if len(GENOMES) != len(paths):
+        raise ValueError("Duplicate sample names in genomes_list")
+
 def assembly_input(wildcards):
-    return f"{assembly_dir}/{wildcards.sample}_shovill/{wildcards.sample}.contigs.fa"
+    if GENOMES:
+        return GENOMES[wildcards.sample]
+    sample = wildcards.sample
+    return f"{config['assembly_dir']}/{sample}_shovill/{sample}.contigs.fa"
 
 rule bakta:
     input:

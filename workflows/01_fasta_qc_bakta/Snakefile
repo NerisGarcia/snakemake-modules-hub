@@ -1,182 +1,113 @@
-with open(config["genome_acc_list"]) as handle:
-    SAMPLES = [
-        line.strip()
-        for line in handle
-        if line.strip() and not line.lstrip().startswith("#")
-    ]
+import os
 
-if not SAMPLES:
-    raise ValueError("The genome accession list is empty")
+EXTS = (".fasta", ".fna", ".fa", ".fas", ".fasta.gz", ".fna.gz", ".fa.gz")
 
-ASS_DIR = config["ass_dir"]
-RESULTS_DIR = config["genomics_results_dir"]
-ANN_DIR = f"{RESULTS_DIR}/02_annotation"
-QC_DIR = f"{RESULTS_DIR}/03_qc"
-BAKTA_DB_DIR = config["bakta_db"]
+def sample_name(path):
+    base = os.path.basename(path)
+    for ext in EXTS:
+        if base.endswith(ext):
+            return base[: -len(ext)]
+    raise ValueError(f"Unrecognised fasta extension: {path}")
 
-BUSCO_OUTPUT =  f"{QC_DIR}/BUSCO"
-BUSCO_LINEAGE = config["busco_lineage"]
-QUAST_OUTPUT = f"{QC_DIR}/QUAST"
-CHECKM2_OUTPUT = f"{QC_DIR}/CheckM2"
-CHECKM2_DB = config["checkm2_db"]
-SUMMARY_TABLE = config["summary_table"]
+with open(config["genome_list"]) as handle:
+    paths = [l.strip() for l in handle if l.strip() and not l.lstrip().startswith("#")]
+if not paths:
+    raise ValueError("The genome list is empty")
 
-def assembly_path(sample):
-    import os
+genomes = {sample_name(p): p for p in paths}
+if len(genomes) != len(paths):
+    raise ValueError("Duplicate sample names in genome list")
+samples = list(genomes)
 
-    candidates = [f"{ASS_DIR}/{sample}.fna", f"{ASS_DIR}/{sample}.fasta"]
-    return next((path for path in candidates if os.path.isfile(path)), candidates[0])
+# Genomes whose file is missing (e.g. failed download) are reported as FAIL instead of stopping the run
+available_samples = [
+    s for s in samples if os.path.isfile(genomes[s]) and os.path.getsize(genomes[s]) > 0
+]
 
-def assembly_input(wildcards):
-    return assembly_path(wildcards.sample)
+results_dir = config["genomics_results_dir"]
+annotation_dir = f"{results_dir}/02_annotation"
+qc_dir = f"{results_dir}/03_qc"
+busco_output = f"{qc_dir}/BUSCO"
+quast_output = f"{qc_dir}/QUAST"
+checkm2_output = f"{qc_dir}/CheckM2"
+summary_table = config["summary_table"]
 
 wildcard_constraints:
     sample="[^/]+"
 
-# expected final output per sample for each step, used only by the summary table
-# "input" flags samples whose assembly is missing because the download step upstream failed
-STEP_TARGETS = {
-    "input": [assembly_path(sample) for sample in SAMPLES],
-    "bakta": expand(f"{ANN_DIR}/{{sample}}.gff3", sample=SAMPLES),
-    "busco": expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt", sample=SAMPLES),
-    "quast": expand(f"{QUAST_OUTPUT}/{{sample}}.quast.transposed_report.tsv", sample=SAMPLES),
-    "checkm2": expand(f"{CHECKM2_OUTPUT}/{{sample}}/quality_report.tsv", sample=SAMPLES),
+module bakta_module:
+    snakefile: "../../modules/03_gene_annotation/bakta/Snakefile"
+    config:
+        {"genomes_list": config["genome_list"], "annotation_dir": annotation_dir,
+         "bakta_db": config["bakta_db"], "threads": config["threads"]["bakta"]}
+
+module busco_module:
+    snakefile: "../../modules/02_assembly/busco/Snakefile"
+    config:
+        {"annotation_dir": annotation_dir, "busco_output": busco_output,
+         "busco_lineage": config["busco_lineage"], "threads": config["threads"]["busco"]}
+
+module quast_module:
+    snakefile: "../../modules/02_assembly/quast/Snakefile"
+    config:
+        {"annotation_dir": annotation_dir, "quast_output": quast_output,
+         "threads": config["threads"]["quast"]}
+
+module checkm2_module:
+    snakefile: "../../modules/02_assembly/checkm2/Snakefile"
+    config:
+        {"annotation_dir": annotation_dir, "checkm2_output": checkm2_output,
+         "checkm2_db": config["checkm2_db"], "threads": config["threads"]["checkm2"]}
+
+use rule * from bakta_module exclude all as bakta_*
+use rule * from busco_module exclude all as busco_*
+use rule * from quast_module exclude all as quast_*
+use rule * from checkm2_module exclude all as checkm2_*
+
+step_targets = {
+    "input": [genomes[s] for s in samples],
+    "bakta": expand(f"{annotation_dir}/{{sample}}.gff3", sample=samples),
+    "busco": expand(f"{busco_output}/{{sample}}_busco_short_summary.txt", sample=samples),
+    "quast": expand(f"{quast_output}/{{sample}}.quast.transposed_report.tsv", sample=samples),
+    "checkm2": expand(f"{checkm2_output}/{{sample}}/quality_report.tsv", sample=samples),
 }
+
+summary_inputs = (
+    expand(f"{annotation_dir}/{{sample}}.gff3", sample=available_samples)
+    + expand(f"{annotation_dir}/{{sample}}.fna", sample=available_samples)
+    + expand(f"{busco_output}/{{sample}}_busco_short_summary.txt", sample=available_samples)
+    + expand(f"{busco_output}/{{sample}}_busco_full_table.tsv", sample=available_samples)
+    + expand(f"{quast_output}/{{sample}}.quast.transposed_report.tsv", sample=available_samples)
+    + expand(f"{checkm2_output}/{{sample}}/quality_report.tsv", sample=available_samples)
+)
+
 rule all:
+    default_target: True
     input:
-        expand(f"{ANN_DIR}/{{sample}}.gff3", sample=SAMPLES),
-        expand(f"{ANN_DIR}/{{sample}}.fna", sample=SAMPLES),
-        expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt", sample=SAMPLES),
-        expand(f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv", sample=SAMPLES),
-        expand(f"{QUAST_OUTPUT}/{{sample}}.quast.transposed_report.tsv", sample=SAMPLES),
-        expand(f"{CHECKM2_OUTPUT}/{{sample}}/quality_report.tsv", sample=SAMPLES)
+        summary_table,
+        summary_inputs
 
-rule checkm2:
+rule summary_table:
     input:
-        f"{ANN_DIR}/{{sample}}.fna"
+        summary_inputs
     output:
-        f"{CHECKM2_OUTPUT}/{{sample}}/quality_report.tsv"
-    params:
-        out_dir=f"{CHECKM2_OUTPUT}/{{sample}}",
-        database=CHECKM2_DB
-    threads: config["threads"]["checkm2"]
-    conda:
-        "checkm2_env"
-    shell:
-        """
-        mkdir -p {params.out_dir}
-        checkm2 predict --input {input} --output-directory {params.out_dir} \
-            --database_path {params.database} --threads {threads} --force
-        """
+        summary_table
+    run:
+        write_summary_table()
 
-rule bakta:
-    input:
-        contigs=assembly_input
-    output:
-        gff3=f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.gff3",
-        fna=f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna"
-    params:
-        out_dir=f"{ANN_DIR}/{{sample}}_bakta",
-        prefix="{sample}",
-        bakta_db=BAKTA_DB_DIR
-    threads: config["threads"]["bakta"]
-    conda:
-        "genomics_env"
-    shell:
-        """
-        mkdir -p {params.out_dir}
-        bakta --db {params.bakta_db} --output {params.out_dir} \
-            --prefix {params.prefix} --locus-tag {params.prefix} \
-            --threads {threads} {input.contigs} --keep-contig-headers --force
-        """
-
-
-rule bakta_cleanup:
-    input:
-        gff3=f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.gff3",
-        fna=f"{ANN_DIR}/{{sample}}_bakta/{{sample}}.fna"
-    output:
-        gff3=f"{ANN_DIR}/{{sample}}.gff3",
-        fna=f"{ANN_DIR}/{{sample}}.fna"
-    params:
-        out_dir=f"{ANN_DIR}/{{sample}}_bakta",
-        prefix="{sample}"
-    shell:
-        """
-        bakta_dir=$(cd "{params.out_dir}" && pwd)
-        gff3_path=$(find "$bakta_dir" -type f -name "{params.prefix}.gff3" -print -quit)
-        fna_path=$(find "$bakta_dir" -type f -name "{params.prefix}.fna" -print -quit)
-        test -n "$gff3_path" && test -n "$fna_path"
-        ln -sfn "$gff3_path" "{output.gff3}"
-        ln -sfn "$fna_path" "{output.fna}"
-
-        rm -f {params.out_dir}/{params.prefix}.embl \
-              {params.out_dir}/{params.prefix}.png \
-              {params.out_dir}/{params.prefix}.svg \
-              {params.out_dir}/{params.prefix}.hypotheticals.faa \
-              {params.out_dir}/{params.prefix}.hypotheticals.tsv
-        """
-
-
-rule busco:
-    input:
-        f"{ANN_DIR}/{{sample}}.fna"
-    output:
-        out2 =  f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt",
-        out4 =  f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv"
-    params:
-        out_dir = f"{BUSCO_OUTPUT}",
-        out1 =  f"{BUSCO_OUTPUT}/{{sample}}/short_summary.specific.{BUSCO_LINEAGE}.{{sample}}.txt",
-        out2 =  f"{BUSCO_OUTPUT}/{{sample}}_busco_short_summary.txt",
-        
-        out3 =  f"{BUSCO_OUTPUT}/{{sample}}/run_{BUSCO_LINEAGE}/full_table.tsv",
-        out4 =  f"{BUSCO_OUTPUT}/{{sample}}_busco_full_table.tsv",
-
-        sample = f"{{sample}}",
-        lineage = BUSCO_LINEAGE
-
-    threads: 8
-    conda:
-        "genomics_env"
-    shell:
-        """
-        busco -i {input} -o {params.sample} -l {params.lineage} -m genome --out_path {params.out_dir} --force --cpu {threads} 
-        mv  {params.out1} {params.out2}
-        mv {params.out3} {params.out4}
-        """
-
-
-rule assembly_qc_sample:
-    input:
-        f"{ANN_DIR}/{{sample}}.fna"
-    output:
-        f"{QUAST_OUTPUT}/{{sample}}.quast.transposed_report.tsv"
-    conda:
-        "quast_full_env"
-    params:
-        out_dir = f"{QUAST_OUTPUT}/{{sample}}_quast"
-    threads: 16
-    shell:
-        r'''
-        quast.py {input} -o {params.out_dir} --threads {threads} --glimmer --no-sv --no-icarus --no-plots --min-contig 200
-
-        mv {params.out_dir}/transposed_report.tsv {output}
-        rm -rf {params.out_dir}
-        '''
-
-
-# runs after the DAG finishes (success or --keep-going with failures) in the same invocation
 def write_summary_table():
-    import os
-    summary_dir = os.path.dirname(SUMMARY_TABLE)
+    summary_dir = os.path.dirname(summary_table)
     if summary_dir:
         os.makedirs(summary_dir, exist_ok=True)
-    with open(SUMMARY_TABLE, "w") as out:
-        out.write("sample\t" + "\t".join(STEP_TARGETS.keys()) + "\n")
-        for i, sample in enumerate(SAMPLES):
+    with open(summary_table, "w") as out:
+        out.write("sample\t" + "\t".join(step_targets.keys()) + "\n")
+        for index, sample in enumerate(samples):
             row = [sample]
-            for paths in STEP_TARGETS.values():
-                path = paths[i]
+            for step, step_paths in step_targets.items():
+                path = step_paths[index]
+                if step != "input" and sample not in available_samples:
+                    row.append("FAIL")
+                    continue
                 row.append("OK" if os.path.exists(path) and os.path.getsize(path) > 0 else "FAIL")
             out.write("\t".join(row) + "\n")
 

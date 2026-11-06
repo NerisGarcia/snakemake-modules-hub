@@ -1,4 +1,7 @@
-assembly_dir: data/results/01_assembly
+# Configuration file for Bakta annotation
+
+# List of genome assembly files, one per line. whole path and filename for each genome assembly should be provided
+genomes_list: data/results/01_assembly/genomes.txt 
 annotation_dir: data/results/02_annotation
 bakta_db: /path/to/bakta/db
 threads: 4

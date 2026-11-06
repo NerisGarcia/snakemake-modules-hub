@@ -1,12 +1,10 @@
-genome_list: "data/test/genomics/genomes.txt"   # one sample name per line
-fasta_dir: "data/test/genomics/fasta"           # {sample}.fna
+genome_list: "data/test/genomics/genomes.txt"   # one full fasta path per line; sample name = basename without extension
 results_dir: "data/results"
 
 bakta_db: "/path/to/bakta/db-light"
 gtdbtk_db: "/path/to/gtdbtk/release226"
 
 gtdbtk:
-  extension: fna
   skip_ani_screen: true
   pplacer_cpus: 1
   extra_args: ""

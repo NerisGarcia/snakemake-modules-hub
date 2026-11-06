@@ -2,6 +2,6 @@ name: checkm2
 channels:
   - conda-forge
   - bioconda
+  - defaults
 dependencies:
-  - python=3.10
-  - checkm2
+  - checkm2=1.1.0
