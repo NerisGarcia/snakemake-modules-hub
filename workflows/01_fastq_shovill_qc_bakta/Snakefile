@@ -1,3 +1,5 @@
+import os
+
 with open(config["sra_acc_list"]) as handle:
     samples = [
         line.strip()
@@ -9,6 +11,18 @@ if not samples:
     raise ValueError("The SRA accession list is empty")
 
 raw_dir = config["sra_raw"]
+samples_with_inputs = {
+    sample
+    for sample in samples
+    if all(
+        os.path.isfile(path) and os.path.getsize(path) > 0
+        for path in (
+            f"{raw_dir}/{sample}_1.fastq.gz",
+            f"{raw_dir}/{sample}_2.fastq.gz",
+        )
+    )
+}
+available_samples = [sample for sample in samples if sample in samples_with_inputs]
 clean_dir = config["clean_dir"]
 results_dir = config["genomics_results_dir"]
 kraken_dir = f"{results_dir}/00_kraken2"
@@ -149,14 +163,15 @@ summary_inputs = [
     path
     for step, paths in step_targets.items()
     if step not in {"input_r1", "input_r2"}
-    for path in paths
+    for sample, path in zip(samples, paths)
+    if sample in samples_with_inputs
 ]
 summary_inputs += (
-    expand(f"{clean_dir}/{{sample}}_1.clean.fastq.gz", sample=samples)
-    + expand(f"{clean_dir}/{{sample}}_2.clean.fastq.gz", sample=samples)
-    + expand(f"{clean_dir}/{{sample}}.fastp.html", sample=samples)
-    + expand(f"{annotation_dir}/{{sample}}.fna", sample=samples)
-    + expand(f"{busco_output}/{{sample}}_busco_full_table.tsv", sample=samples)
+    expand(f"{clean_dir}/{{sample}}_1.clean.fastq.gz", sample=available_samples)
+    + expand(f"{clean_dir}/{{sample}}_2.clean.fastq.gz", sample=available_samples)
+    + expand(f"{clean_dir}/{{sample}}.fastp.html", sample=available_samples)
+    + expand(f"{annotation_dir}/{{sample}}.fna", sample=available_samples)
+    + expand(f"{busco_output}/{{sample}}_busco_full_table.tsv", sample=available_samples)
 )
 
 
@@ -177,8 +192,6 @@ rule summary_table:
 
 
 def write_summary_table():
-    import os
-
     summary_dir = os.path.dirname(summary_table)
     if summary_dir:
         os.makedirs(summary_dir, exist_ok=True)
@@ -186,8 +199,14 @@ def write_summary_table():
         out.write("sample\t" + "\t".join(step_targets.keys()) + "\n")
         for index, sample in enumerate(samples):
             row = [sample]
-            for paths in step_targets.values():
+            for step, paths in step_targets.items():
                 path = paths[index]
+                if (
+                    step not in {"input_r1", "input_r2"}
+                    and sample not in samples_with_inputs
+                ):
+                    row.append("FAIL")
+                    continue
                 row.append(
                     "OK"
                     if os.path.exists(path) and os.path.getsize(path) > 0
