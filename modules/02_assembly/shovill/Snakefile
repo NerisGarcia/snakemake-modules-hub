@@ -12,7 +12,7 @@ rule shovill:
         out_dir=f"{assembly_dir}/{{sample}}_shovill"
     threads: config["threads"]
     conda:
-        "environment.yaml"
+        "shovill.yaml"
     shell:
         """
         mkdir -p {params.out_dir}

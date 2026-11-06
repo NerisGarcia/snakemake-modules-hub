@@ -1,0 +1,8 @@
+clean_dir: data/clean
+kraken_dir: data/results/00_kraken2
+kraken_db: data/dbs/kraken2_test_db
+threads: 16
+
+bracken_read_len: 150
+bracken_level: S
+bracken_threshold: 10

@@ -1,6 +1,6 @@
 # FASTQ assembly, annotation, and QC with modules
 
-This workflow composes the reusable `fastp`, `shovill`, `bakta`, `busco`, `quast`, and `checkm2` modules. Tool-specific execution and output processing live in their respective module directories; this workflow handles samples and the pipeline summary.
+This workflow composes the reusable `fastp`, `kraken2`, `shovill`, `bakta`, `busco`, `quast`, and `checkm2` modules. Tool-specific execution and output processing live in their respective module directories; this workflow handles samples and the pipeline summary.
 
 Edit `config.yaml` before running. The workflow maps its common input/output paths and tool settings into each imported module's configuration. The input list contains one SRA accession per line, and paired FASTQ files must be named `{accession}_1.fastq.gz` and `{accession}_2.fastq.gz`.
 
@@ -19,4 +19,4 @@ snakemake --use-conda --cores 8 --keep-going \
   --configfile workflows/01_fastq_shovill_qc_bakta_modules/config.yaml
 ```
 
-The workflow writes cleaned reads, Shovill assemblies, Bakta annotations, BUSCO/QUAST/CheckM2 results, and `data/results/03_qc/pipeline_summary.tsv`.
+The workflow writes cleaned reads, Kraken2 reports (on the fastp-cleaned reads), Shovill assemblies, Bakta annotations, BUSCO/QUAST/CheckM2 results, and `data/results/03_qc/pipeline_summary.tsv`.

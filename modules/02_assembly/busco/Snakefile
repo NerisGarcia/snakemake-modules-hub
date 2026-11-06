@@ -23,7 +23,7 @@ rule busco:
 
     threads: config["threads"]
     conda:
-        "environment.yaml"
+        "busco.yaml"
     shell:
         """
         busco -i {input} -o {params.sample} -l {params.lineage} -m genome --out_path {params.out_dir} --force --cpu {threads} 

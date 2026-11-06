@@ -8,7 +8,7 @@ rule assembly_qc_sample:
     output:
         f"{quast_output}/{{sample}}.quast.transposed_report.tsv"
     conda:
-        "environment.yaml"
+        "quast.yaml"
     params:
         out_dir = f"{quast_output}/{{sample}}_quast"
     threads: config["threads"]

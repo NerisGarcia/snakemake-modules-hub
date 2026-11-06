@@ -1,0 +1,44 @@
+clean_dir = config["clean_dir"]
+kraken_dir = config["kraken_dir"]
+
+rule kraken2:
+    input:
+        r1=f"{clean_dir}/{{sample}}_1.clean.fastq.gz",
+        r2=f"{clean_dir}/{{sample}}_2.clean.fastq.gz"
+    output:
+        report=f"{kraken_dir}/{{sample}}_kraken2_report.txt"
+    params:
+        db_dir=config["kraken_db"],
+        out_dir=kraken_dir
+    threads: config["threads"]
+    conda:
+        "kraken2.yaml"
+    shell:
+        """
+        mkdir -p {params.out_dir}
+        kraken2 --db {params.db_dir} --threads {threads} --paired \
+            --report {output.report} --output /dev/null \
+            --gzip-compressed {input.r1} {input.r2}
+        """
+
+    
+# Bracken needs a Kraken2 database on which bracken-build was already run for this read length
+rule bracken:
+    input:
+        report=f"{kraken_dir}/{{sample}}_kraken2_report.txt"
+    output:
+        bracken=f"{kraken_dir}/{{sample}}_bracken_{config['bracken_level']}.tsv",
+        bracken_report=f"{kraken_dir}/{{sample}}_bracken_{config['bracken_level']}_report.txt"
+    params:
+        db_dir=config["kraken_db"],
+        read_len=config["bracken_read_len"],
+        level=config["bracken_level"],
+        threshold=config["bracken_threshold"]
+    conda:
+        "kraken2.yaml"
+    shell:
+        """
+        bracken -d {params.db_dir} -i {input.report} -o {output.bracken} \
+            -w {output.bracken_report} -r {params.read_len} \
+            -l {params.level} -t {params.threshold}
+        """

@@ -13,7 +13,7 @@ rule checkm2:
         out_dir=f"{checkm2_output}/{{sample}}"
     threads: config["threads"]
     conda:
-        "environment.yaml"
+        "checkm.yaml"
     shell:
         """
         rm -rf "{params.out_dir}"
