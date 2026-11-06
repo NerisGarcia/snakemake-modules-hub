@@ -1,9 +1,5 @@
 import os
 
-# Modules are fetched from GitHub so the workflow can run from any directory (e.g. a server).
-REPO = "NerisGarcia/snakemake-modules-hub"
-BRANCH = "main"
-
 # Edit-only workflow: it reads an existing Panaroo run (made by 02_panaroo_tree or the panaroo module)
 dataset_name = config.get("dataset_name") or ""
 subcore_config = config.get("subcore") or {}
@@ -83,21 +79,21 @@ module_configs = {
 
 module core_subset:
     snakefile:
-        github(REPO, path="modules/04_pangenome/core_subset/Snakefile", branch=BRANCH)
+        "../../modules/04_pangenome/core_subset/Snakefile"
     config:
         module_configs["core_subset"]
 
 
 module gene_aln_cleaning:
     snakefile:
-        github(REPO, path="modules/04_pangenome/gene_aln_cleaning/Snakefile", branch=BRANCH)
+        "../../modules/04_pangenome/gene_aln_cleaning/Snakefile"
     config:
         module_configs["gene_aln_cleaning"]
 
 
 module editcore_iqtree:
     snakefile:
-        github(REPO, path="modules/05_phylogenetics/iqtree/Snakefile", branch=BRANCH)
+        "../../modules/05_phylogenetics/iqtree/Snakefile"
     config:
         module_configs["editcore_iqtree"]
 

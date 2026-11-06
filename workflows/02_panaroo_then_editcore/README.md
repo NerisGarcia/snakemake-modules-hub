@@ -2,7 +2,7 @@
 
 This workflow does **not** run Panaroo. It reads a finished Panaroo run (made with `workflows/02_panaroo_tree`, which also gives the original core tree; the folder is `.../{dataset}/panaroo_original.core_{pct}`) and builds custom cores and trees from it. Run it as many times as you like with different lists, labels or thresholds. The folder name `02_panaroo_then_editcore` is kept for now.
 
-It composes modules from this repository only, fetched from GitHub with `github()` (`REPO`/`BRANCH` at the top of the Snakefile), so it can run from any directory, e.g. a server. Modules must be pushed to that branch before running:
+It loads modules from the local repository copy using paths relative to the workflow Snakefile. The same repository layout must be present on the server; changes do not need to be pushed to GitHub before running. Paths for data and outputs in the configuration are relative to the working directory unless absolute paths are provided:
 
 1.  `modules/04_pangenome/core_subset` selects single-copy core families and filters the Roary table to the requested samples.
 2.  `modules/04_pangenome/gene_aln_cleaning` cleans and realigns the selected families (listed by `core_subset`) and concatenates them.
