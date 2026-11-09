@@ -23,7 +23,6 @@ reference_file: null
 # --- Tool parameters -------------------------------------------------------
 # Tool-specific options, grouped under the tool name
 gtdbtk:
-  skip_ani_screen: true   # skip mash/ANI pre-screen against GTDB genomes
   pplacer_cpus: 1         # pplacer is RAM-heavy; keep low
   extra_args: ""
 

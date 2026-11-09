@@ -39,7 +39,6 @@ rule gtdbtk_classify:
     params:
         out_dir=out_dir,
         db=db_dir,
-        skip_ani="--skip_ani_screen" if gtdbtk_cfg["skip_ani_screen"] else "",
         pplacer_cpus=gtdbtk_cfg["pplacer_cpus"],
         extra=gtdbtk_cfg["extra_args"]
     threads: config["threads"]
@@ -50,5 +49,5 @@ rule gtdbtk_classify:
         export GTDBTK_DATA_PATH="{params.db}"
         gtdbtk classify_wf --batchfile "{input.batch}" --out_dir "{params.out_dir}" \
             --cpus {threads} --pplacer_cpus {params.pplacer_cpus} \
-            {params.skip_ani} {params.extra}
+            {params.extra}
         """
