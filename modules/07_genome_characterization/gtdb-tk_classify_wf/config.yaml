@@ -23,6 +23,7 @@ reference_file: null
 # --- Tool parameters -------------------------------------------------------
 # Tool-specific options, grouped under the tool name
 gtdbtk:
+  skip_ani_tree: true      # skip ANI tree placement
   pplacer_cpus: 1         # pplacer is RAM-heavy; keep low
   extra_args: ""
 
