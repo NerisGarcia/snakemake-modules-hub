@@ -16,6 +16,10 @@ def sample_name(path):
 with open(config["genome_list"]) as handle:
     genome_paths = [l.strip() for l in handle if l.strip() and not l.lstrip().startswith("#")]
 
+rule all:
+    input:
+        f"{out_dir}/gtdbtk.bac120.summary.tsv"
+
 rule gtdbtk_batchfile:
     input:
         genome_paths
@@ -35,7 +39,7 @@ rule gtdbtk_classify:
     params:
         out_dir=out_dir,
         db=db_dir,
-        skip_ani="--place_species" if gtdbtk_cfg["skip_ani_tree"] else "",
+        skip_ani="" if gtdbtk_cfg["skip_ani_tree"] else "--place_species",
         pplacer_cpus=gtdbtk_cfg["pplacer_cpus"],
         extra=gtdbtk_cfg["extra_args"]
     threads: config["threads"]
