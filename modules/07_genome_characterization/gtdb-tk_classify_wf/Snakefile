@@ -1,6 +1,7 @@
 import os
 
 out_dir = config["out_dir"]
+GT_OUT_DIR = f"{out_dir}/gtdbtk"
 db_dir = config["db_dir"]
 gtdbtk_cfg = config["gtdbtk"]
 
@@ -18,26 +19,26 @@ with open(config["genome_list"]) as handle:
 
 rule all:
     input:
-        f"{out_dir}/gtdbtk.bac120.summary.tsv"
+        f"{GT_OUT_DIR}/gtdbtk.bac120.summary.tsv"
 
 rule gtdbtk_batchfile:
     input:
         genome_paths
     output:
-        batch=f"{out_dir}/batchfile.tsv"
+        batch=f"{GT_OUT_DIR}/batchfile.tsv"
     run:
-        os.makedirs(out_dir, exist_ok=True)
+        os.makedirs(GT_OUT_DIR, exist_ok=True)
         with open(output.batch, "w") as out:
             for p in input:
                 out.write(f"{os.path.abspath(p)}\t{sample_name(p)}\n")
 
 rule gtdbtk_classify:
     input:
-        batch=f"{out_dir}/batchfile.tsv"
+        batch=f"{GT_OUT_DIR}/batchfile.tsv"
     output:
-        summary=f"{out_dir}/gtdbtk.bac120.summary.tsv"
+        summary=f"{GT_OUT_DIR}/gtdbtk.bac120.summary.tsv"
     params:
-        out_dir=out_dir,
+        out_dir=GT_OUT_DIR,
         db=db_dir,
         skip_ani="" if gtdbtk_cfg["skip_ani_tree"] else "--place_species",
         pplacer_cpus=gtdbtk_cfg["pplacer_cpus"],

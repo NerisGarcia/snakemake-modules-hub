@@ -3,8 +3,11 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
+  - python=3.11 
   - glimmerhmm
   - pip:
       - joblib==1.5.3
       - quast==5.2.0
       - simplejson==4.1.1
+
+# I am not usign last python version cause it gives a probelm with dsutils
