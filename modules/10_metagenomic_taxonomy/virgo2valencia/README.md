@@ -1,5 +1,10 @@
 # Valencia v1.2
 
+The module reads the VIRGO2 abundance table specified by `input_file` and
+writes results under `out_dir/VALENCIA`. `dataset_name` determines the output
+prefix. `speciateIT_valencia_ref` may be set to a reference file; otherwise the
+bundled reference is used.
+
 - v1.2 is an adaptation for VIRGO2-style **relative-abundance** data and taxon naming, while the older script is for count tables. The `ref_ave` and `ref_std` values used in the optional plot are the same in both.
 
 - `Valencia.py` is the simpler version. It expects `sampleID`, `read_count`, and taxon read counts, then divides counts by `read_count` before scoring.

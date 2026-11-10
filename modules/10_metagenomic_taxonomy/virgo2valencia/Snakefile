@@ -1,6 +1,6 @@
-VIRGO2_FILE = config["virgo2_relAbun_file"]
+VIRGO2_FILE = config["input_file"]
 
-OUT_DIR = config["out_dir"]
+OUT_DIR = f'{config["out_dir"]}/VALENCIA'
 DATASET = config["dataset_name"]
 
 # Use the configured reference when set; otherwise use this module's bundled file.

@@ -4,27 +4,26 @@ Taxonomically classifies genome assemblies against the Genome Taxonomy Database 
 
 ## Input
 
-- `sample_file`: file with one sample name per line.
-- `raw_dir`: directory with the genomes as `{sample}.{gtdbtk.extension}` (default `.fna`), e.g. from the annotation module.
+- `genome_list`: a file containing one complete genome path per line. This
+  module uses a path list rather than sample names and a common input directory.
 
 ## Output
 
-- `out_dir/gtdbtk.bac120.summary.tsv`: GTDB classification per genome (bacteria). This is the file tracked by Snakemake.
-- `out_dir/gtdbtk.ar53.summary.tsv`: archaeal classifications, written by GTDB-Tk only if archaeal genomes are present (not tracked).
-- `out_dir/batchfile.tsv`: genome path and name table passed to GTDB-Tk.
+- `out_dir/GTDB-Tk/gtdbtk.bac120.summary.tsv`: GTDB classification per genome (bacteria). This is the file tracked by Snakemake.
+- `out_dir/GTDB-Tk/gtdbtk.ar53.summary.tsv`: archaeal classifications, written by GTDB-Tk only if archaeal genomes are present (not tracked).
+- `out_dir/GTDB-Tk/batchfile.tsv`: genome path and name table passed to GTDB-Tk.
 
 ## Config
 
-See [config.yaml](config.yaml). Key variables: `sample_file`, `raw_dir`, `out_dir`, `db_dir`, `threads`, and the `gtdbtk` block:
+See [config.yaml](config.yaml). Key variables: `genome_list`, `out_dir`, `db_dir`, `threads`, and the `gtdbtk` block:
 
-- `extension`: genome file extension (`fna`).
-- `skip_ani_screen`: skip the ANI pre-screen against GTDB genomes (`true`).
+- `skip_ani_tree`: whether to skip ANI tree placement.
 - `pplacer_cpus`: CPUs for pplacer, which is RAM-heavy (`1`).
 - `extra_args`: any additional `gtdbtk classify_wf` options.
 
 ## Environment / databases
 
-- Conda env: `environment.yaml` (`gtdbtk>=2.4`).
+- Conda env: `envs/cenv.gtdbtk.yaml`.
 - Database: GTDB-Tk reference data (\~100 GB) in `db_dir`, exported as `GTDBTK_DATA_PATH`. Download it with `gtdbtk download` or `download-db.sh`.
 
 ## Usage
@@ -32,7 +31,7 @@ See [config.yaml](config.yaml). Key variables: `sample_file`, `raw_dir`, `out_di
 ``` bash
 conda activate snakemake
 
-snakemake --use-conda --cores 8 --configfile modules/07_genome_chaacterization/gtdb-tk_classify_wf/config.yaml
+snakemake --use-conda --cores 8 --snakefile modules/07_genome_characterization/gtdb-tk_classify_wf/Snakefile --configfile modules/07_genome_characterization/gtdb-tk_classify_wf/config.yaml
 ```
 
 ## Notes

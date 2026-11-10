@@ -1,4 +1,8 @@
-cleanifier_dir: data/test/metagenomics/VIRGO2/results/02_cleanifier
-kraken_dir: data/test/metagenomics/VIRGO2/results/03_kraken
+sample_file: data/test/metagenomics/VIRGO2/sample.list
+raw_dir: data/test/metagenomics/VIRGO2/results/cleanifier
+pairend_extension_pattern: ".cleanifier.R{read}"
+unpaired_input_pattern: "{sample}.cleanifier.unpaired"
+input_extension: ".fastq.gz"
+out_dir: data/test/metagenomics/VIRGO2/results
 kraken_db: data/dbs/kraken2_test_db
-kraken_threads: 16
+threads: 16

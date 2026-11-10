@@ -6,23 +6,24 @@ This repository contains Snakemake workflows for downloading NCBI/SRA data, asse
 
 ### From a taxonomic ID
 
-Edit [Fetch_SRA_taxid/config.yml](Fetch_SRA_taxid/config.yml), then run:
+Edit [the SRA taxid module config](modules/00_data_acquisition/fetch_sra_taxid/config.yaml), then run:
 
 ``` bash
-snakemake --use-conda --cores 1 --snakefile Fetch_SRA_taxid/snakemake.smk --configfile Fetch_SRA_taxid/config.yml
+snakemake --use-conda --cores 1 --snakefile modules/00_data_acquisition/fetch_sra_taxid/Snakefile --configfile modules/00_data_acquisition/fetch_sra_taxid/config.yaml
 ```
 
-The important settings are `taxid` and `dataset_out_dir`.
+The important settings are `taxid` and `out_dir`; results go under `out_dir/SRA`.
 
 ### From an accession list
 
-Edit [Download_SRA_list/config.yml](Download_SRA_list/config.yml), then run:
+Edit [the SRA download module config](modules/00_data_acquisition/download_sra_list/config.yaml), then run:
 
 ``` bash
-bash Download_SRA_list/snakemake-runner.sh
+snakemake --use-conda --cores 1 --snakefile modules/00_data_acquisition/download_sra_list/Snakefile --configfile modules/00_data_acquisition/download_sra_list/config.yaml
 ```
 
-The accession file must contain one SRA accession per line. The resulting paired reads must be available as:
+The accession file must contain one SRA accession per line. Paired reads are
+written under `out_dir/SRA/SRA_fastq` as:
 
 ``` text
 {accession}_1.fastq.gz
@@ -33,28 +34,28 @@ The accession file must contain one SRA accession per line. The resulting paired
 
 ### From a taxonomic ID
 
-Edit [Fetch_ncbi_genomes_taxid/config.yml](Fetch_ncbi_genomes_taxid/config.yml), then run:
+Edit [the NCBI taxid module config](modules/00_data_acquisition/fetch_ncbi_genomes_taxid/config.yaml), then run:
 
 ``` bash
-snakemake --use-conda --cores 1 --snakefile Fetch_ncbi_genomes_taxid/snakemake.smk
+snakemake --use-conda --cores 1 --snakefile modules/00_data_acquisition/fetch_ncbi_genomes_taxid/Snakefile --configfile modules/00_data_acquisition/fetch_ncbi_genomes_taxid/config.yaml
 ```
 
-This dowloads all metadata and creates an accession list. You cna filter the accession list using the metadata and feed the filtered accession list to the dowload step
+This downloads metadata and creates an accession list under `out_dir/NCBI_genomes`. Filter the accession list using the metadata and supply it to the download step.
 
-### Dowload ncbi genomes from an accession list
+### Download NCBI genomes from an accession list
 
-Edit [Download_ncbi_genomes_list/config.yml](Download_ncbi_genomes_list/config.yml), then run:
+Edit [the NCBI download module config](modules/00_data_acquisition/download_ncbi_genomes_list/config.yaml), then run:
 
 ``` bash
-snakemake --use-conda --cores 1 --snakefile Download_ncbi_genomes_list/snakemake.smk
+snakemake --use-conda --cores 1 --snakefile modules/00_data_acquisition/download_ncbi_genomes_list/Snakefile --configfile modules/00_data_acquisition/download_ncbi_genomes_list/config.yaml
 ```
 
-The accession list contains one NCBI genome accession per line. Set the output directory in the config before running.
+The accession list contains one NCBI genome accession per line. Results go under `out_dir/NCBI_genomes`.
 
 ## X. get Biosample info
 
 ``` bash
-snakemake --use-conda --cores 1 --snakefile get_biosample_attributes/snakemake.smk --configfile get_biosample_attributes/config.yml 
+snakemake --use-conda --cores 1 --snakefile modules/00_data_acquisition/get_biosample_attributes/Snakefile --configfile modules/00_data_acquisition/get_biosample_attributes/config.yaml
 ```
 
 -- This has to be core 1 if not it gives error
@@ -63,7 +64,7 @@ snakemake --use-conda --cores 1 --snakefile get_biosample_attributes/snakemake.s
 
 This workflow runs FASTP, Shovill, Bakta, BUSCO, and QUAST.
 
-Edit [fastq_shovill_qc_bakta/config.yaml](fastq_shovill_qc_bakta/config.yaml):
+Edit [the FASTQ workflow config](workflows/01_fastq_shovill_qc_bakta/config.yaml):
 
 ``` yaml
 sra_acc_list: "path/to/accessions.txt"
@@ -82,8 +83,8 @@ snakemake \
   --use-conda \
   --cores 8 \
   --keep-going \
-  --snakefile fastq_shovill_qc_bakta/Snakefile \
-  --configfile fastq_shovill_qc_bakta/config.yaml
+  --snakefile workflows/01_fastq_shovill_qc_bakta/Snakefile \
+  --configfile workflows/01_fastq_shovill_qc_bakta/config.yaml
 ```
 
 `--keep-going` allows independent samples to continue when another sample fails. The configured summary table records which expected files exist for each sample.
@@ -91,9 +92,9 @@ snakemake \
 The important outputs are:
 
 ``` text
-data/results/01_assembly/{sample}_shovill/{sample}.contigs.fa
-data/results/02_annotation/{sample}.gff3
-data/results/02_annotation/{sample}.fna
+data/results/01_assembly/shovill/{sample}.contigs.fa
+data/results/02_annotation/bakta/{sample}.gff3
+data/results/02_annotation/bakta/{sample}.fna
 data/results/03_qc/pipeline_summary.tsv
 data/results/03_qc/BUSCO/
 data/results/03_qc/QUAST/
@@ -103,10 +104,10 @@ Bakta writes its complete output inside `{sample}_bakta`. A separate cleanup ste
 
 ### Compose the same pipeline from reusable modules
 
-The module-based variant is in [workflows/01_fastq_shovill_qc_bakta_modules](workflows/01_fastq_shovill_qc_bakta_modules/README.md). It uses the configured `fastp`, `shovill`, `bakta`, `busco`, `quast`, and `checkm2` modules. Edit that workflow's `config.yaml`, then run:
+The module-based workflow is in [workflows/01_fastq_shovill_qc_bakta](workflows/01_fastq_shovill_qc_bakta/README.md). It uses the configured `fastp`, `shovill`, `bakta`, `busco`, `quast`, and `checkm2` modules. Edit that workflow's `config.yaml`, then run:
 
 ``` bash
-bash workflows/01_fastq_shovill_qc_bakta_modules/run.sh
+bash workflows/01_fastq_shovill_qc_bakta/run.sh
 ```
 
 The runner activates the `snakemake` Conda environment before invoking Snakemake. Module directories and filenames follow the convention described in [modules/README.md](modules/README.md).
@@ -115,11 +116,12 @@ The runner activates the `snakemake` Conda environment before invoking Snakemake
 
 This workflow starts from existing genome assemblies and runs Bakta, BUSCO, and QUAST.
 
-Edit [fasta_qc_bakta/config.yaml](fasta_qc_bakta/config.yaml):
+Edit [the FASTA workflow config](workflows/01_fasta_qc_bakta/config.yaml):
 
 ``` yaml
-genome_acc_list: "path/to/genome_accessions.txt"
-ass_dir: "path/to/genome_fasta_files"
+sample_file: "path/to/genome_accessions.txt"
+raw_dir: "path/to/genome_fasta_files"
+input_extension: ".fna"
 genomics_results_dir: "data/results"
 summary_table: "data/results/03_qc/pipeline_summary.tsv"
 bakta_db: "/path/to/bakta/database"
@@ -133,11 +135,13 @@ snakemake \
   --use-conda \
   --cores 8 \
   --keep-going \
-  --snakefile fasta_qc_bakta/Snakefile \
-  --configfile fasta_qc_bakta/config.yaml
+  --snakefile workflows/01_fasta_qc_bakta/Snakefile \
+  --configfile workflows/01_fasta_qc_bakta/config.yaml
 ```
 
-Expected assembly names are based on the sample IDs in `genome_acc_list`. The main outputs are the same annotation and QC layout described for the FASTQ workflow.
+Expected assembly names are based on `sample_file`, `raw_dir`, and
+`input_extension`. The main outputs are the same annotation and QC layout
+described for the FASTQ workflow.
 
 ## 5. Run the reference-free pangenome and tree
 

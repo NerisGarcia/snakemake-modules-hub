@@ -2,6 +2,10 @@
 
 VISTA is an open-source classifier that assigns metagenomic subspecies (mgSs) and metagenomic community state types (mgCSTs) from VIRGO2-derived vaginal metagenomic gene profiles.
 
+Set `input_file` to the compiled VIRGO2 table. Results are written to
+`out_dir/VISTA`; the VISTA executable and data directory are configured with
+`path_vista_ex` and `path_vista_data_dir`.
+
 to use it, first you have to install VISTA manually as there is no conda or pip.
 
 ``` bash

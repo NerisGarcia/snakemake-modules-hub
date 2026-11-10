@@ -1,11 +1,14 @@
 genome_list: "data/test/genomics/genomes.txt"   # one full fasta path per line; sample name = basename without extension
+sample_file: "data/test/genomics/307627_core_samples.txt"
+raw_dir: "data/test/genomics/assemblies"
+input_extension: ".fna"
 results_dir: "data/results"
 
 bakta_db: "/path/to/bakta/db-light"
 gtdbtk_db: "/path/to/gtdbtk/release226"
 
 gtdbtk:
-  skip_ani_screen: true
+  skip_ani_tree: true
   pplacer_cpus: 1
   extra_args: ""
 

@@ -1,10 +1,33 @@
 
-annotation_dir = config["annotation_dir"]
-quast_output = config["quast_output"]
+sample_file = config["sample_file"]
+raw_dir = config["raw_dir"]
+input_extension = config["input_extension"]
+quast_output = f'{config["out_dir"]}/QUAST'
+
+def quast_targets(wildcards):
+    with open(sample_file) as handle:
+        samples = [
+            line.strip()
+            for line in handle
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+    if not samples:
+        raise ValueError(f"sample_file is empty: {sample_file}")
+    if len(samples) != len(set(samples)):
+        raise ValueError(f"sample_file contains duplicate identifiers: {sample_file}")
+    return expand(
+        f"{quast_output}/{{sample}}.quast.transposed_report.tsv", sample=samples
+    )
+
+
+rule all:
+    input:
+        quast_targets
+
 
 rule assembly_qc_sample:
     input:
-        f"{annotation_dir}/{{sample}}.fna"
+        f"{raw_dir}/{{sample}}{input_extension}"
     output:
         f"{quast_output}/{{sample}}.quast.transposed_report.tsv"
     conda:

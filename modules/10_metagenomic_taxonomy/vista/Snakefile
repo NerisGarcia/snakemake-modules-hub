@@ -1,11 +1,11 @@
 import os
 
-VIRGO2_FILE = config["virgo2_compile_file"]
+VIRGO2_FILE = config["input_file"]
 
 VISTA_EX = config["path_vista_ex"]
 VISTA_DATA_DIR = config["path_vista_data_dir"]
 
-OUT_DIR = os.path.abspath(config["out_dir"])
+OUT_DIR = os.path.abspath(os.path.join(config["out_dir"], "VISTA"))
 VIRGO2_FILE = os.path.abspath(VIRGO2_FILE)
 
 WORKING_DIR = os.getcwd()

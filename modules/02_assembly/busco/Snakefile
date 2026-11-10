@@ -1,12 +1,29 @@
 
-annotation_dir = config["annotation_dir"]
-busco_output = config["busco_output"]
+sample_file = config["sample_file"]
+raw_dir = config["raw_dir"]
+input_extension = config["input_extension"]
+busco_output = f'{config["out_dir"]}/BUSCO'
 busco_lineage = config["busco_lineage"]
+
+def busco_targets(wildcards):
+    with open(sample_file) as handle:
+        samples = [line.strip() for line in handle if line.strip() and not line.lstrip().startswith("#")]
+    if not samples or len(samples) != len(set(samples)):
+        raise ValueError(f"sample_file must contain unique sample IDs: {sample_file}")
+    return (
+        expand(f"{busco_output}/{{sample}}_busco_short_summary.txt", sample=samples)
+        + expand(f"{busco_output}/{{sample}}_busco_full_table.tsv", sample=samples)
+    )
+
+
+rule all:
+    input:
+        busco_targets
 
 
 rule busco:
     input:
-        f"{annotation_dir}/{{sample}}.fna"
+        f"{raw_dir}/{{sample}}{input_extension}"
     output:
         out2 =  f"{busco_output}/{{sample}}_busco_short_summary.txt",
         out4 =  f"{busco_output}/{{sample}}_busco_full_table.tsv"

@@ -1,4 +1,6 @@
-annotation_dir: data/results/02_annotation
-busco_output: data/results/03_qc/BUSCO
+sample_file: data/test/genomics/307627_core_samples.txt
+raw_dir: data/results/02_annotation/bakta
+input_extension: ".fna"
+out_dir: data/results/03_qc
 busco_lineage: bacteria_odb12
 threads: 8

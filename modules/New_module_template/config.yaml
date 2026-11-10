@@ -13,11 +13,22 @@ sample_file: data/test/sample.list
 # Directory with the input files of this module
 raw_dir: data/test/raw_data
 
+# Suffix appended to each sample name, including its leading dot
+input_extension: ".fna"
+
+# For paired reads, append this pattern and input_extension to each sample name.
+# {read} is replaced with 1 or 2.
+pairend_extension_pattern: "_R{read}"
+
+# Optional unpaired input, relative to raw_dir, without input_extension.
+# Set to null when no unpaired reads are available.
+unpaired_input_pattern: null
+
 # Specific input file(s) from a previous module, e.g. a table or compiled output
 input_file: data/test/input_file.txt
 
 # --- Outputs ---------------------------------------------------------------
-# Directory where this module stores its results
+# Parent directory; modules create a tool-specific results subdirectory
 out_dir: data/test/results/NN_module_name
 
 # --- Databases and references ----------------------------------------------

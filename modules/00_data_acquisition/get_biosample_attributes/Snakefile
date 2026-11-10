@@ -1,9 +1,9 @@
 
 
-ACCESSIONS_FILE = config.get("biosamp_accessions_file")
-DATASET_DIR = config.get("dataset_out_dir")
+ACCESSIONS_FILE = config["accessions_file"]
+DATASET_DIR = f"{config['out_dir']}/biosample_attributes"
 
-FILE_PREFIX = config.get("file_prefix")
+FILE_PREFIX = config["file_prefix"]
 
 TMP_DIR = DATASET_DIR + "/" + FILE_PREFIX + "_biosample_attributes_tmp"
 

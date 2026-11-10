@@ -1,32 +1,54 @@
 # run kraken _____________________________________________________________
 
-cleanifier_dir = config["cleanifier_dir"]
-kraken_dir = config["kraken_dir"]
+sample_file = config["sample_file"]
+raw_dir = config["raw_dir"]
+read_pattern = config["pairend_extension_pattern"]
+extension = config["input_extension"]
+unpaired_pattern = config["unpaired_input_pattern"]
+kraken_dir = f'{config["out_dir"]}/kraken2'
+if "{read}" not in read_pattern or "{sample}" not in unpaired_pattern:
+    raise ValueError("paired and unpaired input patterns must contain {read} and {sample}, respectively")
+
+
+def kraken_targets(wildcards):
+    with open(sample_file) as handle:
+        samples = [line.strip() for line in handle if line.strip() and not line.lstrip().startswith("#")]
+    if not samples or len(samples) != len(set(samples)):
+        raise ValueError(f"sample_file must contain unique sample IDs: {sample_file}")
+    return expand(f"{kraken_dir}/{{sample}}_brackenSpec.txt", sample=samples)
+
+
+rule all:
+    input:
+        kraken_targets
 
 rule kraken2_paired:
     input:
-        r1_clean_new = f'{cleanifier_dir}/{{sample}}.fastp_clean.R1.fq.gz',
-        r2_clean_new = f'{cleanifier_dir}/{{sample}}.fastp_clean.R2.fq.gz',
+        r1_clean_new = f"{raw_dir}/{{sample}}{read_pattern.replace('{read}', '1')}{extension}",
+        r2_clean_new = f"{raw_dir}/{{sample}}{read_pattern.replace('{read}', '2')}{extension}",
 
     output:
         r1_out = f'{kraken_dir}/{{sample}}_k2.out',
         r1_report = f'{kraken_dir}/{{sample}}_k2profile.txt',
-        r1_unclassified = f'{kraken_dir}/{{sample}}_uncl#.fq.gz'
+        unclassified1 = f'{kraken_dir}/{{sample}}_uncl1.fq.gz',
+        unclassified2 = f'{kraken_dir}/{{sample}}_uncl2.fq.gz'
     params:
-        kraken_db = config["kraken_db"]
+        kraken_db = config["kraken_db"],
+        compression = "--gzip-compressed" if extension.endswith(".gz") else "",
+        unclassified = f'{kraken_dir}/{{sample}}_uncl#.fq.gz'
     conda:
         "environment.yaml"
     threads:
-        config["kraken_threads"]
+        config["threads"]
 
     shell:
         """
-        kraken2 --db {params.kraken_db} --threads {threads} --use-names --unclassified-out {output.r1_unclassified} --output {output.r1_out} --report {output.r1_report} --gzip-compressed --paired {input.r1_clean_new} {input.r2_clean_new}
+        kraken2 --db {params.kraken_db:q} --threads {threads} --use-names --unclassified-out {params.unclassified:q} --output {output.r1_out:q} --report {output.r1_report:q} {params.compression} --paired {input.r1_clean_new:q} {input.r2_clean_new:q}
         """
 
 rule kraken2_unpaired:
     input:
-        un = f'{cleanifier_dir}/{{sample}}.fastp_clean.unpaired.fq.gz'
+        un = f'{raw_dir}/{unpaired_pattern}{extension}'
 
     output:
         un_out = f'{kraken_dir}/{{sample}}_k2_unp.out',
@@ -34,14 +56,15 @@ rule kraken2_unpaired:
         un_unclassified = f'{kraken_dir}/{{sample}}_fastp_clean.unpaired.fq.gz'
 
     threads:
-        config["kraken_threads"]
+        config["threads"]
     params:
-        kraken_db = config["kraken_db"]
+        kraken_db = config["kraken_db"],
+        compression = "--gzip-compressed" if extension.endswith(".gz") else ""
     conda:
         "environment.yaml"
     shell:
         """
-        kraken2 --db {params.kraken_db} {input.un} --threads {threads} --use-names --unclassified-out {output.un_unclassified} --output {output.un_out} --report {output.un_report} --gzip-compressed
+        kraken2 --db {params.kraken_db} {input.un} --threads {threads} --use-names --unclassified-out {output.un_unclassified} --output {output.un_out} --report {output.un_report} {params.compression}
         """
 
 rule combine_kreports:
@@ -52,6 +75,8 @@ rule combine_kreports:
     output:
         combined_report = f'{kraken_dir}/{{sample}}_combined_k2profile.txt'
 
+    conda:
+        "environment.yaml"
     shell:
         """
         combine_kreports.py -r {input.r1_report} {input.un_report} -o {output.combined_report}
@@ -64,9 +89,11 @@ rule bracken:
     output:
         bracken = f'{kraken_dir}/{{sample}}_brackenSpec.txt'
     threads:
-        config["kraken_threads"]
+        config["threads"]
     params:
         kraken_db = config["kraken_db"]
+    conda:
+        "environment.yaml"
     shell:
         """
         bracken -i {input.combined_report} -o {output.bracken} -l S -d {params.kraken_db}

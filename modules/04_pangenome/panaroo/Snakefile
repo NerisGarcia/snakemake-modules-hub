@@ -1,4 +1,4 @@
-SAMPLE_FILE = config["sample_list"]
+SAMPLE_FILE = config["sample_file"]
 
 with open(SAMPLE_FILE) as handle:
     SAMPLES = [
@@ -7,11 +7,12 @@ with open(SAMPLE_FILE) as handle:
         if line.strip() and not line.lstrip().startswith("#")
     ]
 
-if not SAMPLES:
-    raise ValueError("The isolate sample list is empty")
+if not SAMPLES or len(SAMPLES) != len(set(SAMPLES)):
+    raise ValueError("sample_file must contain unique sample IDs")
 
-annot_dir = config["annot_dir"]
-pangenome_dir = config["pangenome_dir"]
+raw_dir = config["raw_dir"]
+input_extension = config["input_extension"]
+pangenome_dir = f'{config["out_dir"]}/panaroo'
 core_threshold = config["core_threshold"]
 # Output folder and file prefix, e.g. panaroo_original.core_90 (override with run_name)
 run_name = config.get("run_name") or f"panaroo_original.core_{round(float(core_threshold) * 100)}"
@@ -30,7 +31,7 @@ rule all:
 
 rule edit_gff_to_remove_gene:
     input:
-        gff=ancient(f"{annot_dir}/{{isolate}}.gff3")
+        gff=ancient(f"{raw_dir}/{{isolate}}{input_extension}")
     output:
         edited_gff=temp(f"{pangenome_dir}/edited/{{isolate}}.gff3")
     log:

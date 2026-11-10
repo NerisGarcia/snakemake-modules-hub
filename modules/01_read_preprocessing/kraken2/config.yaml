@@ -1,5 +1,8 @@
-clean_dir: data/clean
-kraken_dir: data/results/00_kraken2
+sample_file: data/test/sample.list
+raw_dir: data/clean/fastp
+pairend_extension_pattern: ".fastp.R{read}"
+input_extension: ".fastq.gz"
+out_dir: data/results
 kraken_db: data/dbs/kraken2_test_db
 threads: 16
 

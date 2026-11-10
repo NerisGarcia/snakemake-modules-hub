@@ -16,7 +16,7 @@ def read_unique_sample_list(path, label):
     return samples
 
 
-sample_file = config["sample_list"]
+sample_file = config["sample_file"]
 subcore_config = config.get("subcore") or {}
 subsample_config = config.get("subsample") or {}
 core_list = subcore_config.get("core_sample_list") or None
@@ -54,9 +54,9 @@ if analysis_list and not subsample_label:
     raise ValueError("Set subsample.label to describe subsample.analysis_sample_list")
 label = "__".join(part for part in (subcore_label, subsample_label) if part)
 run_name = f"{prefix}.{label}.{core_tag(core_threshold)}"
-run_dir = f"{pangenome_dir}/{run_name}"
+run_dir = f"{config['out_dir']}/core_subset/{run_name}"
 # Produced by the gene_aln_cleaning module
-summary_alignment = f"{run_dir}/{run_name}.gene_alignment.aln"
+summary_alignment = f"{config['out_dir']}/gene_aln_cleaning/{run_name}/{run_name}.gene_alignment.aln"
 summary_file = f"{run_dir}/{run_name}.pangenome_summary.tsv"
 
 samples = read_unique_sample_list(sample_file, "sample_list")
@@ -132,8 +132,7 @@ rule all:
         sample_log,
         alignment_list,
         analysis_sample_out,
-        params_file,
-        summary_file
+        params_file
 
 
 rule write_run_params:

@@ -1,32 +1,14 @@
-# module_name
+# HmmCleaner
 
-One-sentence description of what this module does and which tool(s) it wraps.
+Clean one alignment per name in `sample_file`. The input path is
+`raw_dir/{sample}{input_extension}`, with `{sample}` replaced by the alignment
+name. All inputs in a run use the same extension.
 
-## Input
+Cleaned alignments are written to `out_dir/HmmCleaner/{sample}_hmm.fasta`.
+HmmCleaner runs on a copy in a per-alignment work directory, so input files
+are not modified. Its executable must be available on the command path.
 
-- `sample_file`: ...
-- `raw_dir` / `input_file`: ...
-
-## Output
-
-- `out_dir/...`: ...
-
-## Config
-
-See [config.yaml](config.yaml). Key variables: `dataset_name`, `out_dir`, `threads`, ...
-
-## Environment / databases
-
-- Conda env: `environment.yaml`
-- Databases/references: ... (`null` = module default)
-
-## Usage
-
-``` bash
-conda activate snakemake
-snakemake --use-conda --cores 8 --configfile modules/<category>/module_name/config.yaml
+```bash
+snakemake --snakefile modules/06_msa/hmmcleaner/Snakefile \
+  --configfile modules/06_msa/hmmcleaner/config.yaml --cores 8
 ```
-
-## Notes
-
-Citation / known limitations (optional).

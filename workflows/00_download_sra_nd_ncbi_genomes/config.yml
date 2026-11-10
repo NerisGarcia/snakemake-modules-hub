@@ -2,7 +2,7 @@
 
 
 dataset_name: All_lacto_05Nov2026
-dataset_out_dir: data/0_input_data/0_genomes_05Nov2026
+out_dir: data/0_input_data/0_genomes_05Nov2026
 
 
 # for ncbi
@@ -17,4 +17,3 @@ sra_accessions_file: data/0_input_data/0_genomes_05Nov2026/1578.sra_acc_todown.c
 
 # number of reads for each SRA accession to download.
 n_reads: 3000000
-

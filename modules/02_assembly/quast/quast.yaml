@@ -11,3 +11,4 @@ dependencies:
       - simplejson==4.1.1
 
 # I am not usign last python version cause it gives a probelm with dsutils
+# quast/issues/298

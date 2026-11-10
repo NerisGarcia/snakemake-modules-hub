@@ -1,9 +1,9 @@
 # One FASTA alignment path per line; the gene ID is the file name without its last extension.
-alignment_list: "data/test/genomics/04_pangenome/307627_ncbi_genomes/subcore.isolates_only.core_80/selected_alignments.txt"
+alignment_list: "data/test/genomics/04_pangenome/307627_ncbi_genomes/core_subset/subcore.isolates_only.core_80/selected_alignments.txt"
 # Samples (one per line) and order of the final alignment; genes missing a sample are padded with gaps.
-sample_list: "data/test/genomics/04_pangenome/307627_ncbi_genomes/subcore.isolates_only.core_80/analysis_samples.txt"
-# Everything is written here, and the concatenated alignment is {output_dir}/{prefix}.gene_alignment.aln
-output_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes/subcore.isolates_only.core_80"
+sample_file: "data/test/genomics/04_pangenome/307627_ncbi_genomes/core_subset/subcore.isolates_only.core_80/analysis_samples.txt"
+# Everything is written under out_dir/gene_aln_cleaning/{prefix}.
+out_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes"
 prefix: "subcore.isolates_only.core_80"
 threads: 8
 # Genes with at least this many variable columns are cleaned and realigned;

@@ -1,5 +1,5 @@
-TAXID = config.get("taxid")
-DATASET_DIR = config.get("dataset_out_dir")
+TAXID = config["taxid"]
+DATASET_DIR = f"{config['out_dir']}/SRA"
 
 OUT_PREFIX = f"{DATASET_DIR}/{TAXID}_sra_runexperiments"
 
@@ -17,12 +17,14 @@ rule get_sra_metadata:
     output:
         METADATA_FILE
     params:
-        TAXID=TAXID
+        TAXID=TAXID,
+        out_dir=DATASET_DIR
     conda:
         "environment.yaml"
     shell:
         """
-        esearch -db sra -query "txid{params.TAXID}[Organism:exp]" | efetch -format runinfo > {output}
+        mkdir -p {params.out_dir:q}
+        esearch -db sra -query "txid{params.TAXID}[Organism:exp]" | efetch -format runinfo > {output:q}
         """
 
 

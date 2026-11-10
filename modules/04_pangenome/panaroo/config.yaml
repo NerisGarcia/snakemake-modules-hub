@@ -1,14 +1,15 @@
 # INPUT
 
-# One isolate ID per line; each isolate must have a GFF under annot_dir/{isolate}.gff3.
-sample_list: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
+# One isolate ID per line.
+sample_file: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
 dataset_name: "307627_ncbi_genomes"
-annot_dir: "data/test/genomics/02_annotation"
+raw_dir: "data/test/genomics/02_annotation"
+input_extension: ".gff3"
 
 # OUTPUT 
-# Results go to pangenome_dir/panaroo_original.core_{pct}/ (pct = core_threshold x 100);
+# Results go to out_dir/panaroo/panaroo_original.core_{pct}/ (pct = core_threshold x 100);
 # set run_name to use a different folder name.
-pangenome_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes"
+out_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes"
 
 # PANROO PARAMS:
 
@@ -21,4 +22,3 @@ refind_mode: "default"
 aligner: "mafft"
 
 threads: 8
-

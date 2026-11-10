@@ -1,8 +1,9 @@
 dataset_name: "307627_ncbi_genomes"
 # Full dataset used for the Panaroo run (one isolate ID per line).
-sample_list: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
-# Results go to {pangenome_dir}/<run name>; the Panaroo run is read from {pangenome_dir}/{panaroo.run_name}.
-pangenome_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes"
+sample_file: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
+# The Panaroo run is read from {pangenome_dir}/{panaroo.run_name}.
+pangenome_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes/panaroo"
+out_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes"
 
 panaroo:
   run_name: "panaroo_original.core_90"

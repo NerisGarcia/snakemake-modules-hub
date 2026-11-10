@@ -1,32 +1,40 @@
+sample_file = config["sample_file"]
+raw_dir = config["raw_dir"]
+input_extension = config["input_extension"]
+results_dir = f'{config["out_dir"]}/HmmCleaner'
 
-INPUT_FILE = config["input_file"]
-
-RESULTS_DIR = f"{config['out_dir']}"
+def alignment_targets(wildcards):
+    with open(sample_file) as handle:
+        samples = [
+            line.strip()
+            for line in handle
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+    if not samples or len(samples) != len(set(samples)):
+        raise ValueError(f"sample_file must contain unique alignment names: {sample_file}")
+    return expand(f"{results_dir}/{{sample}}_hmm.fasta", sample=samples)
 
 
 rule all:
     input:
-        RESULTS_DIR
+        alignment_targets
 
 
-# HmmCleaner only works when run from the alignment's directory and writes its
-# outputs (<stem>_hmm.*) there, so they are moved to the output directory.
 rule hmmcleaner:
     input:
-        alignment=INPUT_FILE
+        alignment=f"{raw_dir}/{{sample}}{input_extension}"
     output:
-        results=directory(RESULTS_DIR)
+        alignment=f"{results_dir}/{{sample}}_hmm.fasta"
+    params:
+        work_dir=f"{results_dir}/work/{{sample}}"
+    log:
+        f"{results_dir}/logs/{{sample}}.log"
     threads: 1
     shell:
         r"""
-        mkdir -p {output.results:q} "$(dirname {log:q})"
-        exec > {log:q} 2>&1
-
-        in_dir=$(dirname {input.alignment:q})
-        name=$(basename {input.alignment:q})
-        stem="${{name%.*}}"
-
-        (cd "$in_dir" && HmmCleaner.pl "$name" --large -profile=leave-one-out)
-
-        mv "$in_dir/${{stem}}"_hmm* {output.results:q}/
+        mkdir -p {params.work_dir:q} "$(dirname {log:q})"
+        rm -f {params.work_dir:q}/alignment_hmm.fasta
+        cp {input.alignment:q} {params.work_dir:q}/alignment.fasta
+        (cd {params.work_dir:q} && HmmCleaner.pl alignment.fasta --large -profile=leave-one-out) > {log:q} 2>&1
+        mv {params.work_dir:q}/alignment_hmm.fasta {output.alignment:q}
         """

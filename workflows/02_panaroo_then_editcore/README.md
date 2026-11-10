@@ -22,9 +22,11 @@ Edit [config.yaml](config.yaml): `panaroo.dir` (full path ending at `panaroo_ori
 
 ## Outputs
 
-Next to the Panaroo folder, under `<parent of panaroo.dir>/<subset name>/`, named `subcore.`, `subsamp.` or `subcore_subsamp.` + `{subcore.label}[__{subsample.label}].core_{pct}` (`pct` = `subcore.core_threshold` × 100; labels are required with their list and describe it, e.g. `isolates_only`, `cladeA1`):
+Next to the Panaroo folder, under `<parent of panaroo.dir>/core_subset/<subset name>/`, named `subcore.`, `subsamp.` or `subcore_subsamp.` + `{subcore.label}[__{subsample.label}].core_{pct}` (`pct` = `subcore.core_threshold` × 100; labels are required with their list and describe it, e.g. `isolates_only`, `cladeA1`):
 
 - Custom core group table, sample-selection log, selected gene FASTAs, alignment, AMAS summary, pangenome summary and the IQ-TREE tree.
 - `params.txt` records the settings; re-using a label with different settings stops with an error.
+- Cleaned alignments go under `gene_aln_cleaning/<subset name>/` and the tree
+  under `iqtree/`, both beneath the parent of `panaroo.dir`.
 
 At least one of `subcore.core_sample_list` and `subsample.analysis_sample_list` is required.

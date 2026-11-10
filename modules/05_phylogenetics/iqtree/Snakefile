@@ -1,5 +1,10 @@
-alignment = config["alignment"]
-prefix = config["prefix"]
+import os
+
+alignment = config["input_file"]
+prefix_name = config["prefix"]
+if not prefix_name or os.path.basename(prefix_name) != prefix_name:
+    raise ValueError("prefix must be a filename, not a path")
+prefix = os.path.join(config["out_dir"], "iqtree", prefix_name)
 log_dir = f"{prefix}_logs"
 model = config["model"]
 bootstrap = config.get("bootstrap", 0)

@@ -1,7 +1,7 @@
 import os
 
 out_dir = config["out_dir"]
-GT_OUT_DIR = f"{out_dir}/gtdbtk"
+GT_OUT_DIR = f"{out_dir}/GTDB-Tk"
 db_dir = config["db_dir"]
 gtdbtk_cfg = config["gtdbtk"]
 
@@ -16,6 +16,11 @@ def sample_name(path):
 
 with open(config["genome_list"]) as handle:
     genome_paths = [l.strip() for l in handle if l.strip() and not l.lstrip().startswith("#")]
+if not genome_paths:
+    raise ValueError("genome_list is empty")
+genome_names = [sample_name(path) for path in genome_paths]
+if len(genome_names) != len(set(genome_names)):
+    raise ValueError("genome_list contains duplicate sample names")
 
 rule all:
     input:

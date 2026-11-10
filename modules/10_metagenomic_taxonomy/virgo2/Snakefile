@@ -1,39 +1,27 @@
 
 
-# DATASET
-DATASET_NAME = config["dataset_name"]
-DATASET = DATASET_NAME
+DATASET = config["dataset_name"]
+with open(config["sample_file"]) as handle:
+    SAMPLES = [line.strip() for line in handle if line.strip() and not line.lstrip().startswith("#")]
+if not SAMPLES or len(SAMPLES) != len(set(SAMPLES)):
+    raise ValueError("sample_file must contain unique sample IDs")
 
-# SAMPLES
-FASTQ_FILES = config["sample_file"]
-FASTQ_NAMES = [line for line in open(FASTQ_FILES).read().splitlines() if line.strip() != ""]
-
-# remove extension from FASTQ_NAMES and keep only unique values
-SAMPLES = list(set([name.rsplit('.', 1)[0] for name in FASTQ_NAMES]))
-
-
-# INPUT DIRS
 RAW_DIR = config["raw_dir"]
-GRAL_OUT_DIR = config["out_dir"]
+READ_PATTERN = config["pairend_extension_pattern"]
+EXTENSION = config["input_extension"]
+UNPAIRED_PATTERN = config.get("unpaired_input_pattern")
+VIRGO2_DIR = f'{config["out_dir"]}/VIRGO2'
+VIRGO2_SCRIPT = config["virgo2_script"]
+if "{read}" not in READ_PATTERN:
+    raise ValueError("pairend_extension_pattern must contain {read}")
+if UNPAIRED_PATTERN and "{sample}" not in UNPAIRED_PATTERN:
+    raise ValueError("unpaired_input_pattern must contain {sample}")
 
 
-# NEW OUTPUT DIRS
-FASTP_DIR = f'{GRAL_OUT_DIR}/01_fastp'
-CLEANIFIER_DIR = f'{GRAL_OUT_DIR}/02_cleanifier'
-KRAKEN_DIR = f'{GRAL_OUT_DIR}/03_kraken'
-VIRGO2_DIR = f'{GRAL_OUT_DIR}/04_virgo2'
-VALENCIA_DIR = f'{GRAL_OUT_DIR}/05_valencia'
-VISTA_DIR = f'{GRAL_OUT_DIR}/06_vista'
-
-
-# PARAMS
-# cleanifyer index for human removal
-CLEANIFIER_INDEX = config["cleanifier_index"]
-
-#DBs
-KRAKEN_DB = config["kraken_db"]
-VLC_REF = config["speciateIT_valencia_ref"]
-VIRGOTAXA_TO_RENAME = config["virgotaxa_to_rename"]
+def unpaired_input(wildcards):
+    if not UNPAIRED_PATTERN:
+        return []
+    return [f"{RAW_DIR}/{UNPAIRED_PATTERN.format(sample=wildcards.sample)}{EXTENSION}"]
 
 
 rule all:
@@ -46,32 +34,32 @@ rule all:
 # 4a. merge paired end for VIRGO2_____________________________________________________________
 rule se_for_virgo:
     input:
-        r1_clean_new = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.R1.fq.gz',
-        r2_clean_new = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.R2.fq.gz',
-        un = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.unpaired.fq.gz'
+        r1 = f"{RAW_DIR}/{{sample}}{READ_PATTERN.replace('{read}', '1')}{EXTENSION}",
+        r2 = f"{RAW_DIR}/{{sample}}{READ_PATTERN.replace('{read}', '2')}{EXTENSION}",
+        un = unpaired_input
 
     output:
-        se = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.se.fq.gz'
+        se = f'{VIRGO2_DIR}/reads/{{sample}}.se{EXTENSION}'
 
     threads:
-        config["virgo2_threads"]
+        config["threads"]
 
     shell:
         """
-        cat {input.r1_clean_new} {input.r2_clean_new} {input.un} > {output.se}
+        cat {input:q} > {output.se:q}
         """
 
 # 4b. run VIRGO2 - mapping_____________________________________________________________
 
 rule virgo2_map:
     input:
-        se = f'{CLEANIFIER_DIR}/{{sample}}.fastp_clean.se.fq.gz'
+        se = f'{VIRGO2_DIR}/reads/{{sample}}.se{EXTENSION}'
 
     output:
         out = f'{VIRGO2_DIR}/01_map/{{sample}}.VOG_counts.out'
 
     threads:
-        config["virgo2_threads"]
+        config["threads"]
     
     params:
         sample = f'{VIRGO2_DIR}/01_map/{{sample}}.VOG_counts'
@@ -80,27 +68,30 @@ rule virgo2_map:
 
     shell:
         """
-       python /Users/ngarcia-gonzalez/Desktop/RESEARCH/snakemake-modules-hub/VIRGO2/VIRGO2.py map --bypass 0 --reads {input.se} --threads {threads} --outputPrefix {params.sample}
+       python {VIRGO2_SCRIPT:q} map --bypass 0 --reads {input.se:q} --threads {threads} --outputPrefix {params.sample:q}
         """
 
 # 4c. run VIRGO2 - compile_____________________________________________________________
 
 rule virgo2_compile:
     input:
-        v_dir = f'{VIRGO2_DIR}/01_map'
+        maps = expand(f'{VIRGO2_DIR}/01_map/{{sample}}.VOG_counts.out', sample=SAMPLES)
 
     output:
          out = f'{VIRGO2_DIR}/02_compile/{DATASET}.summary.NR.txt'
 
     threads:
-        config["virgo2_threads"]
+        config["threads"]
 
     params:
-        sample =f'{VIRGO2_DIR}/02_compile/{DATASET}'
+        sample =f'{VIRGO2_DIR}/02_compile/{DATASET}',
+        v_dir = f'{VIRGO2_DIR}/01_map'
 
+    conda:
+        "environment.yaml"
     shell:
         """
-        python /Users/ngarcia-gonzalez/Desktop/RESEARCH/snakemake-modules-hub/VIRGO2/VIRGO2.py compile -i {input.v_dir} --outputPrefix {params.sample}
+        python {VIRGO2_SCRIPT:q} compile -i {params.v_dir:q} --outputPrefix {params.sample:q}
         """
 
 # 4d. run VIRGO2 - taxonomy __________________________________________________________
@@ -110,17 +101,19 @@ rule virgo2_taxonomy:
         in_comp = f'{VIRGO2_DIR}/02_compile/{DATASET}.summary.NR.txt'
 
     output:
-        out = f'{VIRGO2_DIR}/03_taxonomy/TEMP.{DATASET}.relAbund.csv'
+        out = temp(f'{VIRGO2_DIR}/03_taxonomy/TEMP.{DATASET}.relAbund.csv')
 
     threads:
-        config["virgo2_threads"]
+        config["threads"]
 
     params:
         sample = f'{VIRGO2_DIR}/03_taxonomy/TEMP.{DATASET}'
 
+    conda:
+        "environment.yaml"
     shell:
         """
-        python /Users/ngarcia-gonzalez/Desktop/RESEARCH/snakemake-modules-hub/VIRGO2/VIRGO2.py taxonomy -i {input.in_comp} --outputPrefix {params.sample}
+        python {VIRGO2_SCRIPT:q} taxonomy -i {input.in_comp:q} --outputPrefix {params.sample:q}
         """
 
 rule virgo2_taxonomy_counts:
@@ -128,17 +121,19 @@ rule virgo2_taxonomy_counts:
         in_comp = f'{VIRGO2_DIR}/02_compile/{DATASET}.summary.NR.txt'
 
     output:
-        out = f'{VIRGO2_DIR}/03_taxonomy/TEMP.{DATASET}.readCount.csv'
+        out = temp(f'{VIRGO2_DIR}/03_taxonomy/TEMP.{DATASET}.readCount.csv')
 
     threads:
-        config["virgo2_threads"]
+        config["threads"]
 
     params:
         sample = f'{VIRGO2_DIR}/03_taxonomy/TEMP.{DATASET}'
 
+    conda:
+        "environment.yaml"
     shell:
         """
-        python /Users/ngarcia-gonzalez/Desktop/RESEARCH/snakemake-modules-hub/VIRGO2/VIRGO2.py taxonomy -i {input.in_comp} --outputPrefix {params.sample} --readCounts 1
+        python {VIRGO2_SCRIPT:q} taxonomy -i {input.in_comp:q} --outputPrefix {params.sample:q} --readCounts 1
         """
 
 rule change_VBAB_name:
@@ -149,13 +144,11 @@ rule change_VBAB_name:
         taxonomy = f'{VIRGO2_DIR}/03_taxonomy/{DATASET}.relAbund.csv',
         readcount = f'{VIRGO2_DIR}/03_taxonomy/{DATASET}.readCount.csv'
     threads:
-        config["virgo2_threads"]
+        config["threads"]
 
     shell:
         """
-        sed 's/UBA629_sp005465875/Candidatus_Lachnocurva_vaginae/g' {input.taxonomy} > {output.taxonomy}
-        sed 's/UBA629_sp005465875/Candidatus_Lachnocurva_vaginae/g' {input.readcount} > {output.readcount}
-        rm {input.taxonomy} {input.readcount}
+        sed 's/UBA629_sp005465875/Candidatus_Lachnocurva_vaginae/g' {input.taxonomy:q} > {output.taxonomy:q}
+        sed 's/UBA629_sp005465875/Candidatus_Lachnocurva_vaginae/g' {input.readcount:q} > {output.readcount:q}
 
         """
-

@@ -1,3 +1,8 @@
+sample_file: data/test/sample.list
 raw_dir: data/test/SRA_fastq
-clean_dir: data/clean
+pairend_extension_pattern: "_{read}"
+input_extension: ".fastq.gz"
+out_dir: data/clean
 threads: 16
+fastp:
+  extra_args: "--detect_adapter_for_pe --trim_poly_g --cut_right --length_required 55 --cut_window_size 4 --cut_mean_quality 12"

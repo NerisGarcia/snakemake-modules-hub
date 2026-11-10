@@ -1,11 +1,26 @@
 
-annotation_dir = config["annotation_dir"]
-checkm2_output = config["checkm2_output"]
+sample_file = config["sample_file"]
+raw_dir = config["raw_dir"]
+input_extension = config["input_extension"]
+checkm2_output = f'{config["out_dir"]}/CheckM2'
 checkm2_db = config["checkm2_db"]
+
+def checkm2_targets(wildcards):
+    with open(sample_file) as handle:
+        samples = [line.strip() for line in handle if line.strip() and not line.lstrip().startswith("#")]
+    if not samples or len(samples) != len(set(samples)):
+        raise ValueError(f"sample_file must contain unique sample IDs: {sample_file}")
+    return expand(f"{checkm2_output}/{{sample}}/quality_report.tsv", sample=samples)
+
+
+rule all:
+    input:
+        checkm2_targets
+
 
 rule checkm2:
     input:
-        genome=f"{annotation_dir}/{{sample}}.fna",
+        genome=f"{raw_dir}/{{sample}}{input_extension}",
         database=checkm2_db
     output:
         f"{checkm2_output}/{{sample}}/quality_report.tsv"

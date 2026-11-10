@@ -1,8 +1,8 @@
 
 
-biosamp_accessions_file: /Users/ngarcia-gonzalez/Desktop/RESEARCH/Projects/Genomic_analysis/data/1_datasets/Lcrispatus.v1.biosamples_accessions.list
+accessions_file: /Users/ngarcia-gonzalez/Desktop/RESEARCH/Projects/Genomic_analysis/data/1_datasets/Lcrispatus.v1.biosamples_accessions.list
 
-dataset_out_dir: /Users/ngarcia-gonzalez/Desktop/RESEARCH/Projects/Genomic_analysis/data/1_datasets/Lcrispatus.v1
+out_dir: /Users/ngarcia-gonzalez/Desktop/RESEARCH/Projects/Genomic_analysis/data/1_datasets/Lcrispatus.v1
 
 
 # OUTPUT

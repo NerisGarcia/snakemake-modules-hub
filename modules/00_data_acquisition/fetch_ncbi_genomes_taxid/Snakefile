@@ -1,5 +1,5 @@
-TAXID = config.get("taxid")
-DATASET_DIR = config.get("dataset_out_dir")
+TAXID = config["taxid"]
+DATASET_DIR = f"{config['out_dir']}/NCBI_genomes"
 
 DATASET_NAME = f"{TAXID}_ncbi_genomes"
 SUMMARYFILE = f"{DATASET_DIR}/{DATASET_NAME}_summary.tsv"

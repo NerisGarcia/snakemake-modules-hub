@@ -3,11 +3,12 @@
 Builds a pangenome from Bakta GFF3 files with Panaroo and writes a pangenome summary table.
 
 ## Input
-- `sample_list`: one isolate ID per line.
-- `annot_dir/{isolate}.gff3`: annotations.
+- `sample_file`: one isolate ID per line.
+- `raw_dir` and `input_extension` identify each annotation. For example,
+  `".gff3"` selects `raw_dir/{sample}.gff3`.
 
 ## Output
-All under `pangenome_dir/{run_name}/`, where `run_name` defaults to `panaroo_original.core_{pct}` (`pct` = `core_threshold` × 100, e.g. 0.9 → `core_90`); set `run_name` to override:
+All under `out_dir/panaroo/{run_name}/`, where `run_name` defaults to `panaroo_original.core_{pct}` (`pct` = `core_threshold` × 100, e.g. 0.9 → `core_90`); set `run_name` to override:
 - `gene_presence_absence.Rtab`, `gene_presence_absence_roary.csv`
 - `core_gene_alignment.aln`, `core_gene_alignment_filtered.aln` and `.embl` headers
 - `combined_DNA_CDS.fasta`, `aligned_gene_sequences/` (used by `core_subset`)

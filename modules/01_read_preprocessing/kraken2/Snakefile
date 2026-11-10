@@ -1,15 +1,35 @@
-clean_dir = config["clean_dir"]
-kraken_dir = config["kraken_dir"]
+sample_file = config["sample_file"]
+raw_dir = config["raw_dir"]
+read_pattern = config["pairend_extension_pattern"]
+extension = config["input_extension"]
+kraken_dir = f'{config["out_dir"]}/kraken2'
+
+if "{read}" not in read_pattern:
+    raise ValueError("pairend_extension_pattern must contain {read}")
+
+
+def kraken_targets(wildcards):
+    with open(sample_file) as handle:
+        samples = [line.strip() for line in handle if line.strip() and not line.lstrip().startswith("#")]
+    if not samples or len(samples) != len(set(samples)):
+        raise ValueError(f"sample_file must contain unique sample IDs: {sample_file}")
+    return expand(f"{kraken_dir}/{{sample}}_bracken_{config['bracken_level']}.tsv", sample=samples)
+
+
+rule all:
+    input:
+        kraken_targets
 
 rule kraken2:
     input:
-        r1=f"{clean_dir}/{{sample}}_1.clean.fastq.gz",
-        r2=f"{clean_dir}/{{sample}}_2.clean.fastq.gz"
+        r1=f"{raw_dir}/{{sample}}{read_pattern.replace('{read}', '1')}{extension}",
+        r2=f"{raw_dir}/{{sample}}{read_pattern.replace('{read}', '2')}{extension}"
     output:
         report=f"{kraken_dir}/{{sample}}_kraken2_report.txt"
     params:
         db_dir=config["kraken_db"],
-        out_dir=kraken_dir
+        out_dir=kraken_dir,
+        compression="--gzip-compressed" if extension.endswith(".gz") else ""
     threads: config["threads"]
     conda:
         "kraken2.yaml"
@@ -18,7 +38,7 @@ rule kraken2:
         mkdir -p {params.out_dir}
         kraken2 --db {params.db_dir} --threads {threads} --paired \
             --report {output.report} --output /dev/null \
-            --gzip-compressed {input.r1} {input.r2}
+            {params.compression} {input.r1:q} {input.r2:q}
         """
 
     

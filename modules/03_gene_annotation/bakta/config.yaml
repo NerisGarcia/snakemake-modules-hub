@@ -1,7 +1,6 @@
-# Configuration file for Bakta annotation
-
-# List of genome assembly files, one per line. whole path and filename for each genome assembly should be provided
-genomes_list: data/test/genomics/307627_core_samples.txt 
-annotation_dir: data/test/genomics/02_annotation
-bakta_db:bakta_db: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/bakta/27apr2026/db-light"
+sample_file: data/test/genomics/307627_core_samples.txt
+raw_dir: data/test/genomics/assemblies
+input_extension: ".fna"
+out_dir: data/test/genomics
+bakta_db: "/path/to/bakta/database"
 threads: 4

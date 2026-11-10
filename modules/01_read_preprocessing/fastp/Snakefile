@@ -1,42 +1,75 @@
-
+sample_file = config["sample_file"]
 raw_dir = config["raw_dir"]
-clean_dir = config["clean_dir"]
+read_pattern = config["pairend_extension_pattern"]
+extension = config["input_extension"]
+fastp_dir = f'{config["out_dir"]}/fastp'
+extra_args = config["fastp"]["extra_args"]
+
+if "{read}" not in read_pattern:
+    raise ValueError("pairend_extension_pattern must contain {read}")
+
+
+def fastp_targets(wildcards):
+    with open(sample_file) as handle:
+        samples = [line.strip() for line in handle if line.strip() and not line.lstrip().startswith("#")]
+    if not samples or len(samples) != len(set(samples)):
+        raise ValueError(f"sample_file must contain unique sample IDs: {sample_file}")
+    return (
+        expand(f"{fastp_dir}/{{sample}}.fastp.R{{read}}{extension}", sample=samples, read=[1, 2])
+        + expand(f"{fastp_dir}/{{sample}}.fastp.unpaired{extension}", sample=samples)
+        + expand(f"{fastp_dir}/{{sample}}_report.{{suffix}}", sample=samples, suffix=["json", "html", "tsv"])
+    )
+
+
+rule all:
+    input:
+        fastp_targets
+
 
 rule fastp:
     input:
-        r1=f"{raw_dir}/{{sample}}_1.fastq.gz",
-        r2=f"{raw_dir}/{{sample}}_2.fastq.gz"
+        r1=f"{raw_dir}/{{sample}}{read_pattern.replace('{read}', '1')}{extension}",
+        r2=f"{raw_dir}/{{sample}}{read_pattern.replace('{read}', '2')}{extension}"
     output:
-        r1=f"{clean_dir}/{{sample}}_1.clean.fastq.gz",
-        r2=f"{clean_dir}/{{sample}}_2.clean.fastq.gz",
-        json=f"{clean_dir}/{{sample}}.fastp.json",
-        html=f"{clean_dir}/{{sample}}.fastp.html"
+        r1=f"{fastp_dir}/{{sample}}.fastp.R1{extension}",
+        r2=f"{fastp_dir}/{{sample}}.fastp.R2{extension}",
+        un1=temp(f"{fastp_dir}/{{sample}}.fastp.unpaired.R1{extension}"),
+        un2=temp(f"{fastp_dir}/{{sample}}.fastp.unpaired.R2{extension}"),
+        json=f"{fastp_dir}/{{sample}}_report.json",
+        html=f"{fastp_dir}/{{sample}}_report.html"
     threads: config["threads"]
     params:
-        out_dir=f"{clean_dir}"
+        extra_args=extra_args
     conda:
         "environment.yaml"
     shell:
         """
-        mkdir -p {params.out_dir}
-        fastp --in1 {input.r1} --in2 {input.r2} \
-            --out1 {output.r1} --out2 {output.r2} \
-            --json {output.json} --html {output.html} \
-            --thread {threads} --dedup --trim_tail1 3 --trim_tail2 3 \
-            --length_required 120 -q 30 -u 80 \
-            --trim_front1 2 --trim_front2 2
+        fastp --in1 {input.r1:q} --in2 {input.r2:q} \
+            --out1 {output.r1:q} --out2 {output.r2:q} \
+            --unpaired1 {output.un1:q} --unpaired2 {output.un2:q} \
+            --json {output.json:q} --html {output.html:q} \
+            --thread {threads} {params.extra_args}
         """
 
 
 rule fastp_report:
     input:
-        json = f'{clean_dir}/{{sample}}.fastp.json'
-
+        json=f"{fastp_dir}/{{sample}}_report.json"
     output:
-        tsv = f'{clean_dir}/{{sample}}.fastp.tsv'
+        tsv=f"{fastp_dir}/{{sample}}_report.tsv"
     params:
-        delimiter = '\t'
+        delimiter="\t"
     conda:
         "environment.yaml"
     script:
         "scripts/fastp_json_to_csv.py"
+
+
+rule cat_fastq_unpaired:
+    input:
+        un1=f"{fastp_dir}/{{sample}}.fastp.unpaired.R1{extension}",
+        un2=f"{fastp_dir}/{{sample}}.fastp.unpaired.R2{extension}"
+    output:
+        un=f"{fastp_dir}/{{sample}}.fastp.unpaired{extension}"
+    shell:
+        "cat {input.un1:q} {input.un2:q} > {output.un:q}"

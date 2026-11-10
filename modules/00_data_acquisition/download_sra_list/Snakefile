@@ -1,6 +1,6 @@
 
-ACCESSIONS_FILE = config.get("accessions_file")
-DATASET_DIR = config.get("dataset_out_dir")
+ACCESSIONS_FILE = config["accessions_file"]
+DATASET_DIR = f"{config['out_dir']}/SRA"
 
 FASTQ_DIR = f"{DATASET_DIR}/SRA_fastq"
 DONEFILE = f"{DATASET_DIR}/download.log"

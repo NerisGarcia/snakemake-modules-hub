@@ -23,11 +23,11 @@ samples_with_inputs = {
     )
 }
 available_samples = [sample for sample in samples if sample in samples_with_inputs]
-clean_dir = config["clean_dir"]
+clean_dir = f"{config['clean_dir']}/fastp"
 results_dir = config["genomics_results_dir"]
-kraken_dir = f"{results_dir}/00_kraken2"
-assembly_dir = f"{results_dir}/01_assembly"
-annotation_dir = f"{results_dir}/02_annotation"
+kraken_dir = f"{results_dir}/kraken2"
+assembly_dir = f"{results_dir}/01_assembly/shovill"
+annotation_dir = f"{results_dir}/02_annotation/bakta"
 qc_dir = f"{results_dir}/03_qc"
 busco_output = f"{qc_dir}/BUSCO"
 quast_output = f"{qc_dir}/QUAST"
@@ -36,13 +36,20 @@ summary_table = config["summary_table"]
 
 module_configs = {
     "fastp": {
+        "sample_file": config["sra_acc_list"],
         "raw_dir": raw_dir,
-        "clean_dir": clean_dir,
+        "pairend_extension_pattern": "_{read}",
+        "input_extension": ".fastq.gz",
+        "out_dir": config["clean_dir"],
+        "fastp": config["fastp"],
         "threads": config["threads"]["fastp"],
     },
     "kraken2": {
-        "clean_dir": clean_dir,
-        "kraken_dir": kraken_dir,
+        "sample_file": config["sra_acc_list"],
+        "raw_dir": clean_dir,
+        "pairend_extension_pattern": ".fastp.R{read}",
+        "input_extension": ".fastq.gz",
+        "out_dir": results_dir,
         "kraken_db": config["kraken_db"],
         "threads": config["threads"]["kraken2"],
         "bracken_read_len": config["bracken_read_len"],
@@ -50,30 +57,41 @@ module_configs = {
         "bracken_threshold": config["bracken_threshold"],
     },
     "shovill": {
-        "clean_dir": clean_dir,
-        "assembly_dir": assembly_dir,
+        "sample_file": config["sra_acc_list"],
+        "raw_dir": clean_dir,
+        "pairend_extension_pattern": ".fastp.R{read}",
+        "input_extension": ".fastq.gz",
+        "out_dir": f"{results_dir}/01_assembly",
         "threads": config["threads"]["shovill"],
     },
     "bakta": {
-        "assembly_dir": assembly_dir,
-        "annotation_dir": annotation_dir,
+        "sample_file": config["sra_acc_list"],
+        "raw_dir": assembly_dir,
+        "input_extension": ".contigs.fa",
+        "out_dir": f"{results_dir}/02_annotation",
         "bakta_db": config["bakta_db"],
         "threads": config["threads"]["bakta"],
     },
     "busco": {
-        "annotation_dir": annotation_dir,
-        "busco_output": busco_output,
+        "sample_file": config["sra_acc_list"],
+        "raw_dir": annotation_dir,
+        "input_extension": ".fna",
+        "out_dir": qc_dir,
         "busco_lineage": config["busco_lineage"],
         "threads": config["threads"]["busco"],
     },
     "quast": {
-        "annotation_dir": annotation_dir,
-        "quast_output": quast_output,
+        "sample_file": config["sra_acc_list"],
+        "raw_dir": annotation_dir,
+        "input_extension": ".fna",
+        "out_dir": qc_dir,
         "threads": config["threads"]["quast"],
     },
     "checkm2": {
-        "annotation_dir": annotation_dir,
-        "checkm2_output": checkm2_output,
+        "sample_file": config["sra_acc_list"],
+        "raw_dir": annotation_dir,
+        "input_extension": ".fna",
+        "out_dir": qc_dir,
         "checkm2_db": config["checkm2_db"],
         "threads": config["threads"]["checkm2"],
     },
@@ -139,13 +157,13 @@ use rule * from checkm2_module exclude all as checkm2_*
 step_targets = {
     "input_r1": expand(f"{raw_dir}/{{sample}}_1.fastq.gz", sample=samples),
     "input_r2": expand(f"{raw_dir}/{{sample}}_2.fastq.gz", sample=samples),
-    "fastp": expand(f"{clean_dir}/{{sample}}.fastp.json", sample=samples),
+    "fastp": expand(f"{clean_dir}/{{sample}}_report.json", sample=samples),
     "kraken2": expand(
         f"{kraken_dir}/{{sample}}_kraken2_report.txt", sample=samples
     ),
     "bracken": expand(f"{kraken_dir}/{{sample}}_bracken_{config['bracken_level']}.tsv", sample=samples),
     "shovill": expand(
-        f"{assembly_dir}/{{sample}}_shovill/{{sample}}.contigs.fa", sample=samples
+        f"{assembly_dir}/{{sample}}.contigs.fa", sample=samples
     ),
     "bakta": expand(f"{annotation_dir}/{{sample}}_bakta/{{sample}}.gff3", sample=samples),
     "busco": expand(
@@ -167,9 +185,9 @@ summary_inputs = [
     if sample in samples_with_inputs
 ]
 summary_inputs += (
-    expand(f"{clean_dir}/{{sample}}_1.clean.fastq.gz", sample=available_samples)
-    + expand(f"{clean_dir}/{{sample}}_2.clean.fastq.gz", sample=available_samples)
-    + expand(f"{clean_dir}/{{sample}}.fastp.html", sample=available_samples)
+    expand(f"{clean_dir}/{{sample}}.fastp.R1.fastq.gz", sample=available_samples)
+    + expand(f"{clean_dir}/{{sample}}.fastp.R2.fastq.gz", sample=available_samples)
+    + expand(f"{clean_dir}/{{sample}}_report.html", sample=available_samples)
     + expand(f"{annotation_dir}/{{sample}}.fna", sample=available_samples)
     + expand(f"{busco_output}/{{sample}}_busco_full_table.tsv", sample=available_samples)
 )

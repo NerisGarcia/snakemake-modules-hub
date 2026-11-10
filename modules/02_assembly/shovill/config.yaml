@@ -1,3 +1,6 @@
-clean_dir: data/clean
-assembly_dir: data/results/01_assembly
+sample_file: data/test/sample.list
+raw_dir: data/clean/fastp
+pairend_extension_pattern: ".fastp.R{read}"
+input_extension: ".fastq.gz"
+out_dir: data/results/01_assembly
 threads: 16

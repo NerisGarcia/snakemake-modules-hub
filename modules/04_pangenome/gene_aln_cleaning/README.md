@@ -4,11 +4,11 @@ Cleans a set of per-gene alignments and concatenates them. Genes with at least `
 
 ## Input
 - `alignment_list`: text file with one FASTA alignment path per line. The gene ID is the file name without its last extension (must be unique).
-- `sample_list`: samples (and order) of the final alignment; genes lacking a sample are padded with gaps.
-- `output_dir`, `prefix`: where results are written and how the concatenated alignment is named.
+- `sample_file`: samples (and order) of the final alignment; genes lacking a sample are padded with gaps.
+- `out_dir`, `prefix`: where results are written and how the concatenated alignment is named.
 
 ## Output
-Under `{output_dir}/`:
+Under `out_dir/gene_aln_cleaning/{prefix}/`:
 - `{prefix}.gene_alignment.aln`: concatenated alignment.
 - `amas/{prefix}.partitions.txt`, `amas/amas_alignment_summary.tsv` (one row per gene alignment; no per-sequence summaries).
 - `cleaned_gene_alignments/{gene}.fasta`: per-gene alignments used for the concatenation (HmmCleaner output for variable genes, the input alignment for constant genes), padded to the sample list.

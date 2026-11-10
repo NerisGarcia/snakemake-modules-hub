@@ -18,11 +18,21 @@ genomes = {sample_name(p): p for p in paths}
 if len(genomes) != len(paths):
     raise ValueError("Duplicate sample names in genome list")
 samples = list(genomes)
+with open(config["sample_file"]) as handle:
+    configured_samples = [line.strip() for line in handle if line.strip() and not line.lstrip().startswith("#")]
+if len(configured_samples) != len(set(configured_samples)) or set(configured_samples) != set(samples):
+    raise ValueError("sample_file must contain the same unique samples as genome_list")
+for sample, genome in genomes.items():
+    expected = os.path.join(
+        config["raw_dir"], sample + config["input_extension"]
+    )
+    if os.path.abspath(genome) != os.path.abspath(expected):
+        raise ValueError(f"Genome path for {sample} does not match the sample input configuration: {genome} != {expected}")
 
 results_dir = config["results_dir"]
-annotation_dir = f"{results_dir}/02_annotation"
+annotation_dir = f"{results_dir}/02_annotation/bakta"
 quast_output = f"{results_dir}/03_qc/QUAST"
-gtdbtk_out = f"{results_dir}/04_taxonomy/gtdbtk"
+gtdbtk_out = f"{results_dir}/04_taxonomy"
 
 wildcard_constraints:
     sample="[^/]+"
@@ -30,13 +40,17 @@ wildcard_constraints:
 module bakta_module:
     snakefile: "../../modules/03_gene_annotation/bakta/Snakefile"
     config:
-        {"genomes_list": config["genome_list"], "annotation_dir": annotation_dir,
+        {"sample_file": config["sample_file"], "raw_dir": config["raw_dir"],
+         "input_extension": config["input_extension"],
+         "out_dir": f"{results_dir}/02_annotation",
          "bakta_db": config["bakta_db"], "threads": config["threads"]["bakta"]}
 
 module quast_module:
     snakefile: "../../modules/02_assembly/quast/Snakefile"
     config:
-        {"annotation_dir": annotation_dir, "quast_output": quast_output,
+        {"sample_file": config["sample_file"], "raw_dir": annotation_dir,
+         "input_extension": ".fna",
+         "out_dir": f"{results_dir}/03_qc",
          "threads": config["threads"]["quast"]}
 
 module gtdbtk_module:
@@ -48,17 +62,12 @@ module gtdbtk_module:
 
 use rule * from bakta_module exclude all as bakta_*
 
-# bakta reads the input FASTA directly (same files as GTDB-Tk), overriding the module's shovill contigs path
-use rule bakta from bakta_module as bakta_bakta with:
-    input:
-        contigs=lambda wildcards: genomes[wildcards.sample]
-
 use rule * from quast_module exclude all as quast_*
 use rule * from gtdbtk_module exclude all as gtdbtk_*
 
 rule all:
     default_target: True
     input:
-        f"{gtdbtk_out}/gtdbtk.bac120.summary.tsv",
+        f"{gtdbtk_out}/GTDB-Tk/gtdbtk.bac120.summary.tsv",
         expand(f"{annotation_dir}/{{sample}}.gff3", sample=samples),
         expand(f"{quast_output}/{{sample}}.quast.transposed_report.tsv", sample=samples)

@@ -42,14 +42,16 @@ if analysis_list and not subsample_label:
     raise ValueError("Set subsample.label to describe subsample.analysis_sample_list (e.g. 'cladeA1')")
 label = "__".join(part for part in (subcore_label, subsample_label) if part)
 subset_name = f"{subset_prefix}.{label}.{core_tag(subcore_threshold)}"
-subset_dir = f"{pangenome_dir}/{subset_name}"
-subset_tree_prefix = f"{subset_dir}/iqtree/{subset_name}.gene_alignment"
+subset_dir = f"{pangenome_dir}/core_subset/{subset_name}"
+alignment_dir = f"{pangenome_dir}/gene_aln_cleaning/{subset_name}"
+subset_tree_prefix = f"{pangenome_dir}/iqtree/{subset_name}.gene_alignment"
 
 module_configs = {
     "core_subset": {
         "dataset_name": dataset_name,
-        "sample_list": config["sample_list"],
+        "sample_file": config["sample_list"],
         "pangenome_dir": pangenome_dir,
+        "out_dir": pangenome_dir,
         "panaroo": {"run_name": panaroo_run_name},
         "subcore": {
             "core_sample_list": core_list,
@@ -63,16 +65,17 @@ module_configs = {
     },
     "gene_aln_cleaning": {
         "alignment_list": f"{subset_dir}/selected_alignments.txt",
-        "sample_list": f"{subset_dir}/analysis_samples.txt",
-        "output_dir": subset_dir,
+        "sample_file": f"{subset_dir}/analysis_samples.txt",
+        "out_dir": pangenome_dir,
         "prefix": subset_name,
         "threads": config["threads"],
         **config["gene_aln_cleaning"],
     },
     "editcore_iqtree": {
         **config["iqtree"],
-        "alignment": f"{subset_dir}/{subset_name}.gene_alignment.aln",
-        "prefix": subset_tree_prefix,
+        "input_file": f"{alignment_dir}/{subset_name}.gene_alignment.aln",
+        "out_dir": pangenome_dir,
+        "prefix": f"{subset_name}.gene_alignment",
         "threads": config["threads"],
     },
 }
@@ -110,8 +113,8 @@ rule all:
         f"{subset_dir}/selected_core_groups.tsv",
         f"{subset_dir}/sample_selection.tsv",
         f"{subset_dir}/params.txt",
-        f"{subset_dir}/{subset_name}.gene_alignment.aln",
-        f"{subset_dir}/amas/{subset_name}.partitions.txt",
-        f"{subset_dir}/amas/amas_alignment_summary.tsv",
+        f"{alignment_dir}/{subset_name}.gene_alignment.aln",
+        f"{alignment_dir}/amas/{subset_name}.partitions.txt",
+        f"{alignment_dir}/amas/amas_alignment_summary.tsv",
         f"{subset_dir}/{subset_name}.pangenome_summary.tsv",
         f"{subset_tree_prefix}.treefile",

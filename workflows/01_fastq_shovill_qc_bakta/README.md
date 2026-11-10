@@ -20,3 +20,9 @@ snakemake --use-conda --cores 8 --keep-going \
 ```
 
 Samples without both non-empty raw FASTQ files are skipped, marked `FAIL` in the input columns and in the downstream summary columns, and do not prevent other samples from running. The workflow writes cleaned reads, Kraken2 and Bracken reports (on the fastp-cleaned reads), Shovill assemblies, Bakta annotations, BUSCO/QUAST/CheckM2 results, and `data/results/03_qc/pipeline_summary.tsv`.
+
+Fastp filtering flags are controlled by `fastp.extra_args` in the workflow
+config. The module output folders are `clean_dir/fastp`,
+`genomics_results_dir/kraken2`, `genomics_results_dir/01_assembly/shovill`,
+`genomics_results_dir/02_annotation/bakta`, and `BUSCO`, `QUAST`, and
+`CheckM2` beneath `genomics_results_dir/03_qc`.

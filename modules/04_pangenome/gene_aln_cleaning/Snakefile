@@ -3,9 +3,9 @@ import os
 # One FASTA alignment path per line; the gene ID is the file name without its last extension.
 alignment_list = config["alignment_list"]
 # Samples (and order) of the final alignment; genes missing a sample are padded with gaps.
-sample_list = config["sample_list"]
-output_dir = config["output_dir"]
+sample_list = config["sample_file"]
 prefix = config["prefix"]
+output_dir = f"{config['out_dir']}/gene_aln_cleaning/{prefix}"
 
 min_variable_sites = config.get("min_variable_sites", 5)
 gap_seq_max = config.get("gap_seq_max", 0.8)
