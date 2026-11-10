@@ -54,7 +54,7 @@ class ModuleContractTests(unittest.TestCase):
             "modules/02_assembly/quast/Snakefile",
             {
                 "sample_file": str(self.samples),
-                "raw_dir": str(self.raw),
+                "input_dir": str(self.raw),
                 "input_extension": ".contigs.fa",
                 "out_dir": str(self.root / "results"),
                 "threads": 1,
@@ -95,7 +95,7 @@ class ModuleContractTests(unittest.TestCase):
             "modules/01_read_preprocessing/fastp/Snakefile",
             {
                 "sample_file": str(self.samples),
-                "raw_dir": str(self.raw),
+                "input_dir": str(self.raw),
                 "pairend_extension_pattern": "_R{read}",
                 "input_extension": ".fastq.gz",
                 "out_dir": str(self.root / "results"),
@@ -139,7 +139,7 @@ class ModuleContractTests(unittest.TestCase):
         env["PATH"] = f"{bindir}{os.pathsep}{env['PATH']}"
         config = {
             "sample_file": str(self.samples),
-            "raw_dir": str(self.raw),
+            "input_dir": str(self.raw),
             "pairend_extension_pattern": "_{read}",
             "input_extension": ".fastq.gz",
             "unpaired_input_pattern": "{sample}.unpaired",
@@ -161,7 +161,7 @@ class ModuleContractTests(unittest.TestCase):
         workflow.write_text(
             f"module quast:\n    snakefile: {str(module)!r}\n"
             f"    config: {{'sample_file': {str(self.samples)!r}, "
-            f"'raw_dir': {str(results / 'bakta')!r}, "
+            f"'input_dir': {str(results / 'bakta')!r}, "
             f"'input_extension': '.fna', 'out_dir': {str(results)!r}, 'threads': 1}}\n"
             "use rule * from quast exclude all as quast_*\n"
             "rule all:\n    default_target: True\n"
@@ -193,7 +193,7 @@ class ModuleContractTests(unittest.TestCase):
             "modules/02_assembly/shovill/Snakefile",
             {
                 "sample_file": str(self.samples),
-                "raw_dir": str(self.raw),
+                "input_dir": str(self.raw),
                 "pairend_extension_pattern": "_{read}",
                 "input_extension": ".fastq.gz",
                 "out_dir": str(self.root / "results"),
@@ -209,7 +209,7 @@ class ModuleContractTests(unittest.TestCase):
             "modules/03_gene_annotation/bakta/Snakefile",
             {
                 "sample_file": str(self.samples),
-                "raw_dir": str(output_dir),
+                "input_dir": str(output_dir),
                 "input_extension": ".contigs.fa",
                 "out_dir": str(self.root / "results"),
                 "bakta_db": "test-db",
@@ -225,7 +225,7 @@ class ModuleContractTests(unittest.TestCase):
             (self.raw / f"{sample}.fasta").write_text(f">{sample}\nACGT\n")
         common = {
             "sample_file": str(self.samples),
-            "raw_dir": str(self.raw),
+            "input_dir": str(self.raw),
             "input_extension": ".fasta",
             "out_dir": str(self.root / "results"),
             "threads": 1,
@@ -247,7 +247,7 @@ class ModuleContractTests(unittest.TestCase):
         self.samples.write_text("alpha\nalpha\n")
         config = {
             "sample_file": str(self.samples),
-            "raw_dir": str(self.raw),
+            "input_dir": str(self.raw),
             "input_extension": ".fasta",
             "out_dir": str(self.root / "results"),
             "threads": 1,
@@ -255,6 +255,88 @@ class ModuleContractTests(unittest.TestCase):
         with self.assertRaises(subprocess.CalledProcessError) as error:
             self.run_snakemake("modules/02_assembly/quast/Snakefile", config, "--dry-run")
         self.assertIn("duplicate identifiers", error.exception.stdout + error.exception.stderr)
+
+    def test_paired_kraken_and_panaroo_use_input_dir(self):
+        for sample in ("alpha", "beta"):
+            for suffix in ("_1.fastq", "_2.fastq", ".unpaired.fastq", ".gff3"):
+                (self.raw / f"{sample}{suffix}").write_text("fixture\n")
+        common = {"sample_file": str(self.samples), "input_dir": str(self.raw),
+                  "out_dir": str(self.root / "results"), "threads": 1}
+        cases = [
+            (
+                "modules/01_read_preprocessing/kraken2/Snakefile",
+                {**common, "input_extension": ".fastq", "pairend_extension_pattern": "_{read}",
+                 "kraken_db": "test-db", "bracken_level": "S", "bracken_read_len": 150, "bracken_threshold": 10},
+                ("{sample}_1.fastq", "{sample}_2.fastq"),
+            ),
+            (
+                "modules/01_read_preprocessing/kraken2_paired_end/Snakefile",
+                {**common, "input_extension": ".fastq", "pairend_extension_pattern": "_{read}",
+                 "unpaired_input_pattern": "{sample}.unpaired", "kraken_db": "test-db"},
+                ("{sample}_1.fastq", "{sample}_2.fastq", "{sample}.unpaired.fastq"),
+            ),
+            (
+                "modules/04_pangenome/panaroo/Snakefile",
+                {**common, "input_extension": ".gff3", "core_threshold": 0.9,
+                 "clean_mode": "strict", "alignment": "pan", "family_threshold": 0.7,
+                 "refind_mode": "default", "aligner": "mafft"},
+                ("{sample}.gff3",),
+            ),
+        ]
+        for snakefile, config, inputs in cases:
+            with self.subTest(snakefile=snakefile):
+                result = self.run_snakemake(snakefile, config, "--dry-run")
+                output = result.stdout + result.stderr
+                for sample in ("alpha", "beta"):
+                    for input_name in inputs:
+                        self.assertIn(str(self.raw / input_name.format(sample=sample)), output)
+
+    def test_workflows_connect_modules_with_input_dir(self):
+        samples = ("alpha", "beta")
+        for sample in samples:
+            (self.raw / f"{sample}.fna").write_text(f">{sample}\nACGT\n")
+            for read in (1, 2):
+                (self.raw / f"{sample}_{read}.fastq.gz").write_text("reads\n")
+        genomes = self.root / "genomes.txt"
+        genomes.write_text("".join(f"{self.raw / (sample + '.fna')}\n" for sample in samples))
+        results = self.root / "results"
+        common = {
+            "sample_file": str(self.samples),
+            "input_dir": str(self.raw),
+            "input_extension": ".fna",
+            "bakta_db": "test-db",
+            "checkm2_db": str(self.samples),
+            "busco_lineage": "bacteria",
+            "threads": dict.fromkeys(("fastp", "kraken2", "shovill", "bakta", "busco", "quast", "checkm2", "gtdbtk"), 1),
+        }
+        cases = [
+            (
+                "workflows/01_fasta_qc_bakta/Snakefile",
+                {**common, "genomics_results_dir": str(results), "summary_table": str(results / "summary.tsv")},
+                ("bakta_bakta", "busco_busco", "quast_assembly_qc_sample", "checkm2_checkm2"),
+            ),
+            (
+                "workflows/gtdbk_bakta_quast/Snakefile",
+                {**common, "genome_list": str(genomes), "results_dir": str(results),
+                 "gtdbtk_db": "test-db", "gtdbtk": {"skip_ani_tree": True, "pplacer_cpus": 1, "extra_args": ""}},
+                ("bakta_bakta", "quast_assembly_qc_sample", "gtdbtk_gtdbtk_classify"),
+            ),
+            (
+                "workflows/01_fastq_shovill_qc_bakta/Snakefile",
+                {**common, "sra_acc_list": str(self.samples), "sra_raw": str(self.raw),
+                 "clean_dir": str(self.root / "clean"), "genomics_results_dir": str(results),
+                 "summary_table": str(results / "summary.tsv"), "fastp": {"extra_args": ""},
+                 "kraken_db": "test-db", "bracken_read_len": 150, "bracken_level": "S",
+                 "bracken_threshold": 10},
+                ("fastp_fastp", "shovill_shovill", "bakta_bakta", "quast_assembly_qc_sample"),
+            ),
+        ]
+        for snakefile, config, expected_rules in cases:
+            with self.subTest(snakefile=snakefile):
+                result = self.run_snakemake(snakefile, config, "--dry-run")
+                output = result.stdout + result.stderr
+                for rule in expected_rules:
+                    self.assertIn(rule, output)
 
     def test_virgo2_combines_configured_paired_and_unpaired_reads(self):
         for suffix in ("_1", "_2", ".unpaired"):
@@ -266,7 +348,7 @@ class ModuleContractTests(unittest.TestCase):
             {
                 "dataset_name": "example",
                 "sample_file": str(self.samples),
-                "raw_dir": str(self.raw),
+                "input_dir": str(self.raw),
                 "pairend_extension_pattern": "_{read}",
                 "unpaired_input_pattern": "{sample}.unpaired",
                 "input_extension": ".fastq.gz",

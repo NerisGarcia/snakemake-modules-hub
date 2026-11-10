@@ -11,7 +11,7 @@ dataset_name: my_dataset
 sample_file: data/test/sample.list
 
 # Directory with the input files of this module
-raw_dir: data/test/raw_data
+input_dir: data/test/raw_data
 
 # Specific input file(s) from a previous module, e.g. a table or compiled output
 input_file: data/test/input_file.txt

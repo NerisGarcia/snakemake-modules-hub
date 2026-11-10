@@ -1,6 +1,6 @@
 
 sample_file = config["sample_file"]
-raw_dir = config["raw_dir"]
+input_dir = config["input_dir"]
 read_pattern = config["pairend_extension_pattern"]
 extension = config["input_extension"]
 assembly_dir = f'{config["out_dir"]}/shovill'
@@ -23,8 +23,8 @@ rule all:
 
 rule shovill:
     input:
-        r1=f"{raw_dir}/{{sample}}{read_pattern.replace('{read}', '1')}{extension}",
-        r2=f"{raw_dir}/{{sample}}{read_pattern.replace('{read}', '2')}{extension}"
+        r1=f"{input_dir}/{{sample}}{read_pattern.replace('{read}', '1')}{extension}",
+        r2=f"{input_dir}/{{sample}}{read_pattern.replace('{read}', '2')}{extension}"
     output:
         contigs=f"{assembly_dir}/{{sample}}_shovill/{{sample}}.contigs.fa"
     params:

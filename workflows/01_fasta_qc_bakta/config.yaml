@@ -1,6 +1,6 @@
 # One sample identifier per line.
 sample_file: "data/test/genomics/307627_core_samples.txt"
-raw_dir: "data/test/genomics/assemblies"
+input_dir: "data/test/genomics/assemblies"
 input_extension: ".fna"
 
 genomics_results_dir: "data/test"

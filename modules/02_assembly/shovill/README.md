@@ -1,6 +1,6 @@
 # Shovill
 
-Provide `sample_file`, `raw_dir`, `pairend_extension_pattern` (with `{read}`
+Provide `sample_file`, `input_dir`, `pairend_extension_pattern` (with `{read}`
 for reads 1 and 2), and `input_extension`. Each assembly is written as
 `out_dir/shovill/{sample}_shovill/{sample}.contigs.fa`. A flat relative
 symlink, `out_dir/shovill/{sample}.contigs.fa`, lets downstream modules use

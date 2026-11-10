@@ -120,7 +120,7 @@ Edit [the FASTA workflow config](workflows/01_fasta_qc_bakta/config.yaml):
 
 ``` yaml
 sample_file: "path/to/genome_accessions.txt"
-raw_dir: "path/to/genome_fasta_files"
+input_dir: "path/to/genome_fasta_files"
 input_extension: ".fna"
 genomics_results_dir: "data/results"
 summary_table: "data/results/03_qc/pipeline_summary.tsv"
@@ -139,7 +139,7 @@ snakemake \
   --configfile workflows/01_fasta_qc_bakta/config.yaml
 ```
 
-Expected assembly names are based on `sample_file`, `raw_dir`, and
+Expected assembly names are based on `sample_file`, `input_dir`, and
 `input_extension`. The main outputs are the same annotation and QC layout
 described for the FASTQ workflow.
 

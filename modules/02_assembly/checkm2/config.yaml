@@ -1,5 +1,5 @@
 sample_file: data/test/genomics/307627_core_samples.txt
-raw_dir: data/results/02_annotation/bakta
+input_dir: data/results/02_annotation/bakta
 input_extension: ".fna"
 out_dir: data/results/03_qc
 checkm2_db: /path/to/checkm2/CheckM2_database/uniref100.KO.1.dmnd

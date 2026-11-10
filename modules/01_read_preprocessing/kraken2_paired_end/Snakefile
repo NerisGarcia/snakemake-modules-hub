@@ -1,7 +1,7 @@
 # run kraken _____________________________________________________________
 
 sample_file = config["sample_file"]
-raw_dir = config["raw_dir"]
+input_dir = config["input_dir"]
 read_pattern = config["pairend_extension_pattern"]
 extension = config["input_extension"]
 unpaired_pattern = config["unpaired_input_pattern"]
@@ -24,8 +24,8 @@ rule all:
 
 rule kraken2_paired:
     input:
-        r1_clean_new = f"{raw_dir}/{{sample}}{read_pattern.replace('{read}', '1')}{extension}",
-        r2_clean_new = f"{raw_dir}/{{sample}}{read_pattern.replace('{read}', '2')}{extension}",
+        r1_clean_new = f"{input_dir}/{{sample}}{read_pattern.replace('{read}', '1')}{extension}",
+        r2_clean_new = f"{input_dir}/{{sample}}{read_pattern.replace('{read}', '2')}{extension}",
 
     output:
         r1_out = f'{kraken_dir}/{{sample}}_k2.out',
@@ -48,7 +48,7 @@ rule kraken2_paired:
 
 rule kraken2_unpaired:
     input:
-        un = f'{raw_dir}/{unpaired_pattern}{extension}'
+        un = f'{input_dir}/{unpaired_pattern}{extension}'
 
     output:
         un_out = f'{kraken_dir}/{{sample}}_k2_unp.out',

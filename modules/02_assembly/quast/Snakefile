@@ -1,6 +1,6 @@
 
 sample_file = config["sample_file"]
-raw_dir = config["raw_dir"]
+input_dir = config["input_dir"]
 input_extension = config["input_extension"]
 quast_output = f'{config["out_dir"]}/QUAST'
 
@@ -27,7 +27,7 @@ rule all:
 
 rule assembly_qc_sample:
     input:
-        f"{raw_dir}/{{sample}}{input_extension}"
+        f"{input_dir}/{{sample}}{input_extension}"
     output:
         f"{quast_output}/{{sample}}.quast.transposed_report.tsv"
     conda:

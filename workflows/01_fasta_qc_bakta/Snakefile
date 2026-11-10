@@ -6,7 +6,7 @@ if not samples or len(samples) != len(set(samples)):
     raise ValueError("sample_file must contain unique sample IDs")
 genomes = {
     sample: os.path.join(
-        config["raw_dir"], sample + config["input_extension"]
+        config["input_dir"], sample + config["input_extension"]
     )
     for sample in samples
 }
@@ -30,7 +30,7 @@ wildcard_constraints:
 module bakta_module:
     snakefile: "../../modules/03_gene_annotation/bakta/Snakefile"
     config:
-        {"sample_file": config["sample_file"], "raw_dir": config["raw_dir"],
+        {"sample_file": config["sample_file"], "input_dir": config["input_dir"],
          "input_extension": config["input_extension"],
          "out_dir": f"{results_dir}/02_annotation",
          "bakta_db": config["bakta_db"], "threads": config["threads"]["bakta"]}
@@ -38,21 +38,21 @@ module bakta_module:
 module busco_module:
     snakefile: "../../modules/02_assembly/busco/Snakefile"
     config:
-        {"sample_file": config["sample_file"], "raw_dir": annotation_dir,
+        {"sample_file": config["sample_file"], "input_dir": annotation_dir,
          "input_extension": ".fna", "out_dir": qc_dir,
          "busco_lineage": config["busco_lineage"], "threads": config["threads"]["busco"]}
 
 module quast_module:
     snakefile: "../../modules/02_assembly/quast/Snakefile"
     config:
-        {"sample_file": config["sample_file"], "raw_dir": annotation_dir,
+        {"sample_file": config["sample_file"], "input_dir": annotation_dir,
          "input_extension": ".fna", "out_dir": qc_dir,
          "threads": config["threads"]["quast"]}
 
 module checkm2_module:
     snakefile: "../../modules/02_assembly/checkm2/Snakefile"
     config:
-        {"sample_file": config["sample_file"], "raw_dir": annotation_dir,
+        {"sample_file": config["sample_file"], "input_dir": annotation_dir,
          "input_extension": ".fna", "out_dir": qc_dir,
          "checkm2_db": config["checkm2_db"], "threads": config["threads"]["checkm2"]}
 

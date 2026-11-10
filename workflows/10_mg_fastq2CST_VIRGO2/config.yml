@@ -5,7 +5,7 @@ dataset_name: mombabies_test
 fastp_min_length: 55
 
 # input directories
-raw_dir: data/test/metagenomics/VIRGO2/raw_data
+input_dir: data/test/metagenomics/VIRGO2/raw_data
 
 # output dir where you want to store results
 out_dir: data/test/metagenomics/VIRGO2/results

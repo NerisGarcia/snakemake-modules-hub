@@ -1,5 +1,5 @@
 sample_file: data/test/sample.list
-raw_dir: data/test/SRA_fastq
+input_dir: data/test/SRA_fastq
 pairend_extension_pattern: "_{read}"
 input_extension: ".fastq.gz"
 out_dir: data/clean

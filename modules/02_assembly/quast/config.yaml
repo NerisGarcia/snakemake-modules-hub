@@ -1,5 +1,5 @@
 sample_file: data/test/genomics/307627_core_samples.txt
-raw_dir: data/results/02_annotation
+input_dir: data/results/02_annotation
 input_extension: ".fna"
 out_dir: data/results/03_qc
 threads: 16

@@ -1,5 +1,5 @@
 sample_file: data/test/sample.list
-raw_dir: data/clean/fastp
+input_dir: data/clean/fastp
 pairend_extension_pattern: ".fastp.R{read}"
 input_extension: ".fastq.gz"
 out_dir: data/results

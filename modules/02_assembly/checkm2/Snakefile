@@ -1,6 +1,6 @@
 
 sample_file = config["sample_file"]
-raw_dir = config["raw_dir"]
+input_dir = config["input_dir"]
 input_extension = config["input_extension"]
 checkm2_output = f'{config["out_dir"]}/CheckM2'
 checkm2_db = config["checkm2_db"]
@@ -20,7 +20,7 @@ rule all:
 
 rule checkm2:
     input:
-        genome=f"{raw_dir}/{{sample}}{input_extension}",
+        genome=f"{input_dir}/{{sample}}{input_extension}",
         database=checkm2_db
     output:
         f"{checkm2_output}/{{sample}}/quality_report.tsv"

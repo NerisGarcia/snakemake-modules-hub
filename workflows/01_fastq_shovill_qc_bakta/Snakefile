@@ -10,15 +10,15 @@ with open(config["sra_acc_list"]) as handle:
 if not samples:
     raise ValueError("The SRA accession list is empty")
 
-raw_dir = config["sra_raw"]
+input_dir = config["sra_raw"]
 samples_with_inputs = {
     sample
     for sample in samples
     if all(
         os.path.isfile(path) and os.path.getsize(path) > 0
         for path in (
-            f"{raw_dir}/{sample}_1.fastq.gz",
-            f"{raw_dir}/{sample}_2.fastq.gz",
+            f"{input_dir}/{sample}_1.fastq.gz",
+            f"{input_dir}/{sample}_2.fastq.gz",
         )
     )
 }
@@ -37,7 +37,7 @@ summary_table = config["summary_table"]
 module_configs = {
     "fastp": {
         "sample_file": config["sra_acc_list"],
-        "raw_dir": raw_dir,
+        "input_dir": input_dir,
         "pairend_extension_pattern": "_{read}",
         "input_extension": ".fastq.gz",
         "out_dir": config["clean_dir"],
@@ -46,7 +46,7 @@ module_configs = {
     },
     "kraken2": {
         "sample_file": config["sra_acc_list"],
-        "raw_dir": clean_dir,
+        "input_dir": clean_dir,
         "pairend_extension_pattern": ".fastp.R{read}",
         "input_extension": ".fastq.gz",
         "out_dir": results_dir,
@@ -58,7 +58,7 @@ module_configs = {
     },
     "shovill": {
         "sample_file": config["sra_acc_list"],
-        "raw_dir": clean_dir,
+        "input_dir": clean_dir,
         "pairend_extension_pattern": ".fastp.R{read}",
         "input_extension": ".fastq.gz",
         "out_dir": f"{results_dir}/01_assembly",
@@ -66,7 +66,7 @@ module_configs = {
     },
     "bakta": {
         "sample_file": config["sra_acc_list"],
-        "raw_dir": assembly_dir,
+        "input_dir": assembly_dir,
         "input_extension": ".contigs.fa",
         "out_dir": f"{results_dir}/02_annotation",
         "bakta_db": config["bakta_db"],
@@ -74,7 +74,7 @@ module_configs = {
     },
     "busco": {
         "sample_file": config["sra_acc_list"],
-        "raw_dir": annotation_dir,
+        "input_dir": annotation_dir,
         "input_extension": ".fna",
         "out_dir": qc_dir,
         "busco_lineage": config["busco_lineage"],
@@ -82,14 +82,14 @@ module_configs = {
     },
     "quast": {
         "sample_file": config["sra_acc_list"],
-        "raw_dir": annotation_dir,
+        "input_dir": annotation_dir,
         "input_extension": ".fna",
         "out_dir": qc_dir,
         "threads": config["threads"]["quast"],
     },
     "checkm2": {
         "sample_file": config["sra_acc_list"],
-        "raw_dir": annotation_dir,
+        "input_dir": annotation_dir,
         "input_extension": ".fna",
         "out_dir": qc_dir,
         "checkm2_db": config["checkm2_db"],
@@ -155,8 +155,8 @@ use rule * from quast_module exclude all as quast_*
 use rule * from checkm2_module exclude all as checkm2_*
 
 step_targets = {
-    "input_r1": expand(f"{raw_dir}/{{sample}}_1.fastq.gz", sample=samples),
-    "input_r2": expand(f"{raw_dir}/{{sample}}_2.fastq.gz", sample=samples),
+    "input_r1": expand(f"{input_dir}/{{sample}}_1.fastq.gz", sample=samples),
+    "input_r2": expand(f"{input_dir}/{{sample}}_2.fastq.gz", sample=samples),
     "fastp": expand(f"{clean_dir}/{{sample}}_report.json", sample=samples),
     "kraken2": expand(
         f"{kraken_dir}/{{sample}}_kraken2_report.txt", sample=samples

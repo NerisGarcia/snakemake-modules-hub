@@ -10,7 +10,7 @@ with open(SAMPLE_FILE) as handle:
 if not SAMPLES or len(SAMPLES) != len(set(SAMPLES)):
     raise ValueError("sample_file must contain unique sample IDs")
 
-raw_dir = config["raw_dir"]
+input_dir = config["input_dir"]
 input_extension = config["input_extension"]
 pangenome_dir = f'{config["out_dir"]}/panaroo'
 core_threshold = config["core_threshold"]
@@ -31,7 +31,7 @@ rule all:
 
 rule edit_gff_to_remove_gene:
     input:
-        gff=ancient(f"{raw_dir}/{{isolate}}{input_extension}")
+        gff=ancient(f"{input_dir}/{{isolate}}{input_extension}")
     output:
         edited_gff=temp(f"{pangenome_dir}/edited/{{isolate}}.gff3")
     log:

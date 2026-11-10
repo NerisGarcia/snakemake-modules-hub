@@ -1,5 +1,5 @@
 sample_file = config["sample_file"]
-raw_dir = config["raw_dir"]
+input_dir = config["input_dir"]
 input_extension = config["input_extension"]
 results_dir = f'{config["out_dir"]}/HmmCleaner'
 
@@ -22,7 +22,7 @@ rule all:
 
 rule hmmcleaner:
     input:
-        alignment=f"{raw_dir}/{{sample}}{input_extension}"
+        alignment=f"{input_dir}/{{sample}}{input_extension}"
     output:
         alignment=f"{results_dir}/{{sample}}_hmm.fasta"
     params:

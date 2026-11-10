@@ -1,6 +1,6 @@
 
 sample_file = config["sample_file"]
-raw_dir = config["raw_dir"]
+input_dir = config["input_dir"]
 input_extension = config["input_extension"]
 busco_output = f'{config["out_dir"]}/BUSCO'
 busco_lineage = config["busco_lineage"]
@@ -23,7 +23,7 @@ rule all:
 
 rule busco:
     input:
-        f"{raw_dir}/{{sample}}{input_extension}"
+        f"{input_dir}/{{sample}}{input_extension}"
     output:
         out2 =  f"{busco_output}/{{sample}}_busco_short_summary.txt",
         out4 =  f"{busco_output}/{{sample}}_busco_full_table.tsv"

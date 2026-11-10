@@ -1,5 +1,5 @@
 # One alignment name per line.
 sample_file: data/test/genomics/alignment_names.txt
-raw_dir: data/test/genomics/alignments
+input_dir: data/test/genomics/alignments
 input_extension: ".fasta"
 out_dir: data/test/genomics/results

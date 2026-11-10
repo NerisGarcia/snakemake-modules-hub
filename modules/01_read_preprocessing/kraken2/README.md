@@ -1,6 +1,6 @@
 # Kraken2 and Bracken
 
-Provide `sample_file`, `raw_dir`, `pairend_extension_pattern` (with `{read}`
+Provide `sample_file`, `input_dir`, `pairend_extension_pattern` (with `{read}`
 for reads 1 and 2), and `input_extension`. `kraken_db` selects the database;
 configure the Bracken read length and classification level in the config.
 Reports are written under `out_dir/kraken2`.

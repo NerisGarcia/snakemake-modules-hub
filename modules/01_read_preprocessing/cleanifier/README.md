@@ -1,9 +1,9 @@
 # Cleanifier
 
 Remove human reads from paired FASTQ inputs. `sample_file` contains one sample
-name per line. Each paired input is `raw_dir/{sample}` followed by
+name per line. Each paired input is `input_dir/{sample}` followed by
 `pairend_extension_pattern` and `input_extension`; `{read}` is replaced by 1
-or 2. Optionally, set `unpaired_input_pattern` to a path relative to `raw_dir`
+or 2. Optionally, set `unpaired_input_pattern` to a path relative to `input_dir`
 containing `{sample}`; the same `input_extension` is appended. Use null when
 there is no unpaired input.
 

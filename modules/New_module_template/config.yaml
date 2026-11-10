@@ -11,7 +11,7 @@ dataset_name: my_dataset
 sample_file: data/test/sample.list
 
 # Directory with the input files of this module
-raw_dir: data/test/raw_data
+input_dir: data/test/raw_data
 
 # Suffix appended to each sample name, including its leading dot
 input_extension: ".fna"
@@ -20,7 +20,7 @@ input_extension: ".fna"
 # {read} is replaced with 1 or 2.
 pairend_extension_pattern: "_R{read}"
 
-# Optional unpaired input, relative to raw_dir, without input_extension.
+# Optional unpaired input, relative to input_dir, without input_extension.
 # Set to null when no unpaired reads are available.
 unpaired_input_pattern: null
 

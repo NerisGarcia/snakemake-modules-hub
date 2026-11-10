@@ -1,5 +1,5 @@
 sample_file = config["sample_file"]
-raw_dir = config["raw_dir"]
+input_dir = config["input_dir"]
 read_pattern = config["pairend_extension_pattern"]
 extension = config["input_extension"]
 unpaired_pattern = config.get("unpaired_input_pattern")
@@ -30,8 +30,8 @@ rule all:
 
 rule cleanifier_paired:
     input:
-        r1=f"{raw_dir}/{{sample}}{read_pattern.replace('{read}', '1')}{extension}",
-        r2=f"{raw_dir}/{{sample}}{read_pattern.replace('{read}', '2')}{extension}"
+        r1=f"{input_dir}/{{sample}}{read_pattern.replace('{read}', '1')}{extension}",
+        r2=f"{input_dir}/{{sample}}{read_pattern.replace('{read}', '2')}{extension}"
     output:
         r1=f"{cleanifier_dir}/{{sample}}.cleanifier.R1.fastq.gz",
         r2=f"{cleanifier_dir}/{{sample}}.cleanifier.R2.fastq.gz"
@@ -54,7 +54,7 @@ rule cleanifier_paired:
 if unpaired_pattern:
     rule cleanifier_unpaired:
         input:
-            un=f"{raw_dir}/{unpaired_pattern}{extension}"
+            un=f"{input_dir}/{unpaired_pattern}{extension}"
         output:
             un=f"{cleanifier_dir}/{{sample}}.cleanifier.unpaired.fastq.gz"
         params:

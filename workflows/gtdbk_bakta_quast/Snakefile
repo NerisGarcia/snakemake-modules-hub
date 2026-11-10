@@ -24,7 +24,7 @@ if len(configured_samples) != len(set(configured_samples)) or set(configured_sam
     raise ValueError("sample_file must contain the same unique samples as genome_list")
 for sample, genome in genomes.items():
     expected = os.path.join(
-        config["raw_dir"], sample + config["input_extension"]
+        config["input_dir"], sample + config["input_extension"]
     )
     if os.path.abspath(genome) != os.path.abspath(expected):
         raise ValueError(f"Genome path for {sample} does not match the sample input configuration: {genome} != {expected}")
@@ -40,7 +40,7 @@ wildcard_constraints:
 module bakta_module:
     snakefile: "../../modules/03_gene_annotation/bakta/Snakefile"
     config:
-        {"sample_file": config["sample_file"], "raw_dir": config["raw_dir"],
+        {"sample_file": config["sample_file"], "input_dir": config["input_dir"],
          "input_extension": config["input_extension"],
          "out_dir": f"{results_dir}/02_annotation",
          "bakta_db": config["bakta_db"], "threads": config["threads"]["bakta"]}
@@ -48,7 +48,7 @@ module bakta_module:
 module quast_module:
     snakefile: "../../modules/02_assembly/quast/Snakefile"
     config:
-        {"sample_file": config["sample_file"], "raw_dir": annotation_dir,
+        {"sample_file": config["sample_file"], "input_dir": annotation_dir,
          "input_extension": ".fna",
          "out_dir": f"{results_dir}/03_qc",
          "threads": config["threads"]["quast"]}

@@ -4,8 +4,8 @@ Builds a pangenome from Bakta GFF3 files with Panaroo and writes a pangenome sum
 
 ## Input
 - `sample_file`: one isolate ID per line.
-- `raw_dir` and `input_extension` identify each annotation. For example,
-  `".gff3"` selects `raw_dir/{sample}.gff3`.
+- `input_dir` and `input_extension` identify each annotation. For example,
+  `".gff3"` selects `input_dir/{sample}.gff3`.
 
 ## Output
 All under `out_dir/panaroo/{run_name}/`, where `run_name` defaults to `panaroo_original.core_{pct}` (`pct` = `core_threshold` × 100, e.g. 0.9 → `core_90`); set `run_name` to override:

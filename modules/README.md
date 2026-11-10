@@ -16,22 +16,25 @@ settings use snake_case keys and are passed to imported modules through
 Snakemake's `module` configuration. `config.yaml`, `environment.yaml`,
 `scripts/`, and `README.md` are included when applicable.
 
+Reusable synthetic inputs and smoke-test instructions are available in
+[tests/module_smoke](../tests/module_smoke/README.md).
+
 ## Sample-based input contract
 
 The [configuration template](New_module_template/config.yaml) defines the
-common names. `sample_file` contains one sample identifier per line, `raw_dir`
+common names. `sample_file` contains one sample identifier per line, `input_dir`
 is the input directory, and `out_dir` is the parent of the module's
 tool-specific output directory. Empty lines and comment lines beginning with
 `#` are ignored.
 
-- A single per-sample input is `raw_dir/{sample}<input_extension>`. For
-  example, `".fna"` selects `raw_dir/sample.fna` and `".contigs.fa"` selects
-  `raw_dir/sample.contigs.fa`. Configure one suffix per run; there is no
+- A single per-sample input is `input_dir/{sample}<input_extension>`. For
+  example, `".fna"` selects `input_dir/sample.fna` and `".contigs.fa"` selects
+  `input_dir/sample.contigs.fa`. Configure one suffix per run; there is no
   extension guessing.
-- Paired reads are `raw_dir/{sample}<pairend_extension_pattern><input_extension>`.
+- Paired reads are `input_dir/{sample}<pairend_extension_pattern><input_extension>`.
   The pattern substitutes `{read}` with `1` and `2`: `".fastp.R{read}"` and
   `".fastq.gz"` select `sample.fastp.R1.fastq.gz` and `sample.fastp.R2.fastq.gz`.
-- When supported, `unpaired_input_pattern` is a path relative to `raw_dir`
+- When supported, `unpaired_input_pattern` is a path relative to `input_dir`
   containing `{sample}`; append `input_extension`. Set it to null if no
   unpaired input is available.
 
@@ -52,9 +55,10 @@ they are not usable standardized modules yet.
 
 The standardized keys and tool subdirectories replace previous module-specific
 input/output keys. Existing custom configs and downstream scripts must be
-updated; consult each module's config and README for its exact output paths.
+updated: rename the former `raw_dir` key to `input_dir` in configs and module
+imports. Consult each module's config and README for its exact output paths.
 The former `input_pattern` setting is no longer used: inputs must be in
-`raw_dir` with the sample name followed by `input_extension`. Shovill exposes
+`input_dir` with the sample name followed by `input_extension`. Shovill exposes
 its assemblies as flat links while retaining the original per-sample outputs.
 Fastp filtering is now configured using `fastp.extra_args`; its paired outputs
 are named `{sample}.fastp.R1{input_extension}` and

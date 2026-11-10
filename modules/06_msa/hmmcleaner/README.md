@@ -1,7 +1,7 @@
 # HmmCleaner
 
 Clean one alignment per name in `sample_file`. The input path is
-`raw_dir/{sample}{input_extension}`, with `{sample}` replaced by the alignment
+`input_dir/{sample}{input_extension}`, with `{sample}` replaced by the alignment
 name. All inputs in a run use the same extension.
 
 Cleaned alignments are written to `out_dir/HmmCleaner/{sample}_hmm.fasta`.

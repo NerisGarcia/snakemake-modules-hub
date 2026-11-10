@@ -12,7 +12,7 @@ SAMPLES = [line for line in open(SAMPLEFILE).read().splitlines() if line.strip()
 
 # DIRS
 SCRIPTS_DIR = f'{workflow.basedir}/scripts'
-RAW_DIR = config["raw_dir"]
+INPUT_DIR = config["input_dir"]
 GRAL_OUT_DIR = config["out_dir"]
 
 FASTP_DIR = f'{GRAL_OUT_DIR}/01_fastp'
@@ -65,8 +65,8 @@ rule all:
 
 rule fastp:
     input:
-        r1 = f'{RAW_DIR}/{{sample}}.R1.fq.gz',
-        r2 = f'{RAW_DIR}/{{sample}}.R2.fq.gz',
+        r1 = f'{INPUT_DIR}/{{sample}}.R1.fq.gz',
+        r2 = f'{INPUT_DIR}/{{sample}}.R2.fq.gz',
 
     output:
         r1 = f'{FASTP_DIR}/{{sample}}.fastp.R1.fq.gz',

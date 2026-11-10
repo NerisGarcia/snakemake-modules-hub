@@ -3,7 +3,7 @@
 # One isolate ID per line.
 sample_file: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
 dataset_name: "307627_ncbi_genomes"
-raw_dir: "data/test/genomics/02_annotation"
+input_dir: "data/test/genomics/02_annotation"
 input_extension: ".gff3"
 
 # OUTPUT 

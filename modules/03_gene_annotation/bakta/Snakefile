@@ -1,5 +1,5 @@
 sample_file = config["sample_file"]
-raw_dir = config["raw_dir"]
+input_dir = config["input_dir"]
 input_extension = config["input_extension"]
 annotation_dir = f'{config["out_dir"]}/bakta'
 bakta_db = config["bakta_db"]
@@ -18,7 +18,7 @@ rule all:
 
 rule bakta:
     input:
-        contigs=f"{raw_dir}/{{sample}}{input_extension}"
+        contigs=f"{input_dir}/{{sample}}{input_extension}"
     output:
         gff3=f"{annotation_dir}/{{sample}}_bakta/{{sample}}.gff3",
         fna=f"{annotation_dir}/{{sample}}_bakta/{{sample}}.fna"

@@ -1,5 +1,5 @@
 sample_file: data/test/metagenomics/VIRGO2/sample.list
-raw_dir: data/test/metagenomics/VIRGO2/results/cleanifier
+input_dir: data/test/metagenomics/VIRGO2/results/cleanifier
 pairend_extension_pattern: ".cleanifier.R{read}"
 unpaired_input_pattern: "{sample}.cleanifier.unpaired"
 input_extension: ".fastq.gz"

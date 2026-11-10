@@ -1,8 +1,8 @@
 # QUAST
 
 Assess each assembly listed in `sample_file` (one sample identifier per line).
-The input path is `raw_dir/{sample}{input_extension}`. For example, use
-`".fna"` for `raw_dir/{sample}.fna`, or `".contigs.fa"` for flat Shovill
+The input path is `input_dir/{sample}{input_extension}`. For example, use
+`".fna"` for `input_dir/{sample}.fna`, or `".contigs.fa"` for flat Shovill
 assemblies.
 Choose one extension per run; input files need not exist before upstream
 workflow rules produce them.

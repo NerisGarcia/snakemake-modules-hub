@@ -1,5 +1,5 @@
 sample_file: data/test/genomics/307627_core_samples.txt
-raw_dir: data/test/genomics/assemblies
+input_dir: data/test/genomics/assemblies
 input_extension: ".fna"
 out_dir: data/test/genomics
 bakta_db: "/path/to/bakta/database"

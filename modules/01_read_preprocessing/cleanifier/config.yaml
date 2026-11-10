@@ -1,5 +1,5 @@
 sample_file: data/test/metagenomics/VIRGO2/sample.list
-raw_dir: data/test/metagenomics/VIRGO2/raw_data
+input_dir: data/test/metagenomics/VIRGO2/raw_data
 pairend_extension_pattern: ".R{read}"
 input_extension: ".fq.gz"
 # Use "{sample}.fastp.unpaired" for fastp output, or null if not available.

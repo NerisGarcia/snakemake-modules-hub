@@ -6,7 +6,7 @@ with open(config["sample_file"]) as handle:
 if not SAMPLES or len(SAMPLES) != len(set(SAMPLES)):
     raise ValueError("sample_file must contain unique sample IDs")
 
-RAW_DIR = config["raw_dir"]
+INPUT_DIR = config["input_dir"]
 READ_PATTERN = config["pairend_extension_pattern"]
 EXTENSION = config["input_extension"]
 UNPAIRED_PATTERN = config.get("unpaired_input_pattern")
@@ -21,7 +21,7 @@ if UNPAIRED_PATTERN and "{sample}" not in UNPAIRED_PATTERN:
 def unpaired_input(wildcards):
     if not UNPAIRED_PATTERN:
         return []
-    return [f"{RAW_DIR}/{UNPAIRED_PATTERN.format(sample=wildcards.sample)}{EXTENSION}"]
+    return [f"{INPUT_DIR}/{UNPAIRED_PATTERN.format(sample=wildcards.sample)}{EXTENSION}"]
 
 
 rule all:
@@ -34,8 +34,8 @@ rule all:
 # 4a. merge paired end for VIRGO2_____________________________________________________________
 rule se_for_virgo:
     input:
-        r1 = f"{RAW_DIR}/{{sample}}{READ_PATTERN.replace('{read}', '1')}{EXTENSION}",
-        r2 = f"{RAW_DIR}/{{sample}}{READ_PATTERN.replace('{read}', '2')}{EXTENSION}",
+        r1 = f"{INPUT_DIR}/{{sample}}{READ_PATTERN.replace('{read}', '1')}{EXTENSION}",
+        r2 = f"{INPUT_DIR}/{{sample}}{READ_PATTERN.replace('{read}', '2')}{EXTENSION}",
         un = unpaired_input
 
     output:
