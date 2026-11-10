@@ -39,7 +39,7 @@ rule bakta:
         bakta_db=bakta_db
     threads: config["threads"]
     conda:
-        "environment.yaml"
+        "cenv.bakta.yaml"
     shell:
         """
         mkdir -p {params.out_dir}
@@ -59,8 +59,6 @@ rule bakta_cleanup:
     params:
         out_dir=f"{annotation_dir}/{{sample}}_bakta",
         prefix="{sample}"
-    conda:
-        "environment.yaml"
     shell:
         """
         bakta_dir=$(cd "{params.out_dir}" && pwd)
