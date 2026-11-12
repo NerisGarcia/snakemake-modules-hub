@@ -1,6 +1,6 @@
 
 # One isolate ID per line, matching the PanACoTA database naming (-l flag).
-isolate_list: "data/test/isolates.txt"
+isolate_list: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
 
 # Protein/genome database directory formatted for PanACoTA (-d flag).
 panacota_db_dir: "data/panacota_db"
@@ -8,7 +8,7 @@ panacota_db_dir: "data/panacota_db"
 # Name of the pangenome, used as PanACoTA's -n prefix.
 pangenome_name: "MyPangenome"
 
-genomics_results_dir: "data/results"
+genomics_results_dir: "tests_runs/modules/panacota"
 
 panacota:
   core_threshold: 0.9

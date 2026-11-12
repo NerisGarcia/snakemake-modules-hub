@@ -1,14 +1,14 @@
 # One FASTA alignment path per line; the gene ID is the file name without its last extension.
-alignment_list: "data/test/genomics/04_pangenome/307627_ncbi_genomes/core_subset/subcore.isolates_only.core_80/selected_alignments.txt"
+alignment_list: "data/test/module_test/alignment_paths.txt"
 # Samples (one per line) and order of the final alignment; genes missing a sample are padded with gaps.
-sample_file: "data/test/genomics/04_pangenome/307627_ncbi_genomes/core_subset/subcore.isolates_only.core_80/analysis_samples.txt"
+sample_file: "data/test/genomics/307627_core_samples.txt"
 # Everything is written under out_dir/gene_aln_cleaning/{prefix}.
-out_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes"
-prefix: "subcore.isolates_only.core_80"
+out_dir: "tests_runs/modules/gene_aln_cleaning"
+prefix: "test"
 threads: 8
 # Genes with at least this many variable columns are cleaned and realigned;
 # the others are used as given.
-min_variable_sites: 5
+min_variable_sites: 1000000
 # Sequences with a larger gap fraction are dropped before realignment.
 gap_seq_max: 0.8
 hmmcleaner:

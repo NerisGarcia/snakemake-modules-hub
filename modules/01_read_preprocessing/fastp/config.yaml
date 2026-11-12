@@ -1,8 +1,8 @@
-sample_file: data/test/sample.list
-input_dir: data/test/SRA_fastq
-pairend_extension_pattern: "_{read}"
-input_extension: ".fastq.gz"
-out_dir: data/clean
-threads: 16
+sample_file: data/test/metagenomics/VIRGO2/sample.list
+input_dir: data/test/metagenomics/VIRGO2/raw_data
+pairend_extension_pattern: ".R{read}"
+input_extension: ".fq.gz"
+out_dir: tests_runs/modules/fastp
+threads: 4
 fastp:
   extra_args: "--detect_adapter_for_pe --trim_poly_g --cut_right --length_required 55 --cut_window_size 4 --cut_mean_quality 12"

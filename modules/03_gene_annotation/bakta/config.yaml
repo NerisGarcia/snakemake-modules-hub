@@ -1,6 +1,6 @@
 sample_file: data/test/genomics/307627_core_samples.txt
-input_dir: data/test/genomics/assemblies
+input_dir: data/test/genomics/Wporifererum_ncbi_fna
 input_extension: ".fna"
-out_dir: data/test/genomics
-bakta_db: "/path/to/bakta/database"
+out_dir: tests_runs/modules/bakta
+bakta_db: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/bakta/27apr2026/db-light"
 threads: 4

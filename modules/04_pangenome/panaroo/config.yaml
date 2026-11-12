@@ -9,7 +9,7 @@ input_extension: ".gff3"
 # OUTPUT 
 # Results go to out_dir/panaroo/panaroo_original.core_{pct}/ (pct = core_threshold x 100);
 # set run_name to use a different folder name.
-out_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes"
+out_dir: "tests_runs/modules/panaroo"
 
 # PANROO PARAMS:
 

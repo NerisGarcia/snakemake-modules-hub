@@ -3,4 +3,4 @@ path_vista_ex: /Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/VISTA/run_VISTA.R
 path_vista_data_dir: /Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/VISTA/
 input_file: data/test/metagenomics/VIRGO2/results/04_virgo2/02_compile/mombabies_test.summary.NR.txt
 
-out_dir: /Users/ngarcia-gonzalez/Desktop/RESEARCH/snakemake-modules-hub/data/test/metagenomics/VIRGO2/results
+out_dir: tests_runs/modules/vista

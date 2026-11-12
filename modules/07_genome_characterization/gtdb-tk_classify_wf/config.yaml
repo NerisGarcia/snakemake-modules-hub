@@ -8,12 +8,12 @@ dataset_name: Ravel_lab_isolate_collection
 
 # --- Inputs ----------------------------------------------------------------
 # File with one full path to each genome sample per line
-genome_list: data/test/genomics/genome_paths.txt
+genome_list: data/test/module_test/genome_paths.txt
 
 
 # --- Outputs ---------------------------------------------------------------
 # Directory where this module stores its results
-out_dir: data/test/genomics/7_genome_characterization
+out_dir: tests_runs/modules/gtdbtk
 
 # --- Databases and references ----------------------------------------------
 # GTDB-Tk reference data directory (exported as GTDBTK_DATA_PATH, ~100 GB)

@@ -16,8 +16,40 @@ settings use snake_case keys and are passed to imported modules through
 Snakemake's `module` configuration. `config.yaml`, `environment.yaml`,
 `scripts/`, and `README.md` are included when applicable.
 
-Reusable synthetic inputs and smoke-test instructions are available in
-[tests/module_smoke](../tests/module_smoke/README.md).
+## Local module tests
+
+The implemented module `config.yaml` files use existing local files in
+`data/test/`, except for the unfinished modules and the external resources
+listed below. Data acquisition modules were excluded. From the repository
+root, run an individual module with its config and Conda environment, for
+example:
+
+```bash
+conda run -n snakemake snakemake --cores 4 --use-conda \
+  -s modules/02_assembly/quast/Snakefile \
+  --configfile modules/02_assembly/quast/config.yaml
+```
+
+Replace both paths with those of the module to test. Results are written to
+`tests_runs/modules/` so existing inputs and results are not overwritten.
+The read files are several gigabytes each, so read-based modules can take
+substantial time and storage. The existing reads are metagenomic rather than
+isolate reads, so Shovill's test may not produce a useful assembly.
+`data/` and `tests_runs/` are ignored by Git; these configs depend on local
+data and are not self-contained in a clone.
+The alignment and genome path lists in `data/test/module_test/` refer to
+existing files in `data/test/genomics/`.
+
+Some tools also require references: Bakta, CheckM2, VIRGO2 and VISTA use
+local installation paths in their configs; change these if needed. BUSCO may
+download its lineage. Cleanifier needs a matching index, Kraken2 and Bracken
+need a built database, and GTDB-Tk needs its reference data; supply valid
+paths in their configs before running. PanACoTA needs a formatted database and
+its current workflow does not define a producer for its final tree. FastTree
+is empty, and trimAl and MetaBAT are unfinished. Their configs alone cannot
+make them runnable. HmmCleaner is not tested locally. The gene alignment
+cleaning test uses a high variable-site threshold to avoid running HmmCleaner,
+so it does not test the cleaning branch.
 
 ## Sample-based input contract
 
