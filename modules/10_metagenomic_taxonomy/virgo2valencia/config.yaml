@@ -6,7 +6,7 @@ dataset_name: mombabies_test
 input_file: data/test/metagenomics/VIRGO2/results/04_virgo2/03_taxonomy/mombabies_test.relAbund.csv
 
 # output dir where you want to store results
-out_dir: data/test/metagenomics/VIRGO2/results
+out_dir: tests_runs/modules/virgo2valencia
 
 # reference file for centroids used by VALENCIA
 # if null or not specified, the default reference will be used

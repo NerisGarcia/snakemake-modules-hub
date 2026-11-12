@@ -1,6 +1,6 @@
 sample_file: data/test/genomics/307627_core_samples.txt
-input_dir: data/results/02_annotation/bakta
+input_dir: data/test/genomics/02_annotation
 input_extension: ".fna"
-out_dir: data/results/03_qc
+out_dir: tests_runs/modules/busco
 busco_lineage: bacteria_odb12
 threads: 8

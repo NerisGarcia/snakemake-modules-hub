@@ -1,8 +1,8 @@
 sample_file: data/test/metagenomics/VIRGO2/sample.list
-input_dir: data/test/metagenomics/VIRGO2/results/cleanifier
-pairend_extension_pattern: ".cleanifier.R{read}"
-unpaired_input_pattern: "{sample}.cleanifier.unpaired"
-input_extension: ".fastq.gz"
-out_dir: data/test/metagenomics/VIRGO2/results
+input_dir: data/test/metagenomics/VIRGO2/results/02_cleanifier
+pairend_extension_pattern: ".fastp_clean.R{read}"
+unpaired_input_pattern: "{sample}.fastp_clean.unpaired"
+input_extension: ".fq.gz"
+out_dir: tests_runs/modules/kraken2_paired_end
 kraken_db: data/dbs/kraken2_test_db
 threads: 16

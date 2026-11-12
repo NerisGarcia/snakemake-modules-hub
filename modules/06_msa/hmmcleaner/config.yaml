@@ -1,5 +1,5 @@
 # One alignment name per line.
-sample_file: data/test/genomics/alignment_names.txt
-input_dir: data/test/genomics/alignments
+sample_file: data/test/module_test/alignment_names.txt
+input_dir: data/test/genomics/04_pangenome/307627_ncbi_genomes/core_v1_subsample_only_isolates_0.9/gene_alignments
 input_extension: ".fasta"
-out_dir: data/test/genomics/results
+out_dir: tests_runs/modules/hmmcleaner

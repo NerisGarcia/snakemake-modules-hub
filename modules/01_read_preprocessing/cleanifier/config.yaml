@@ -4,6 +4,6 @@ pairend_extension_pattern: ".R{read}"
 input_extension: ".fq.gz"
 # Use "{sample}.fastp.unpaired" for fastp output, or null if not available.
 unpaired_input_pattern: null
-out_dir: data/test/metagenomics/VIRGO2/results
+out_dir: tests_runs/modules/cleanifier
 cleanifier_index: data/cleanifier_index/t2t_pangenome_hla_variants_cdna_cleanifier_index_k29_w33.info
 threads: 16

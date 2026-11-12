@@ -1,7 +1,7 @@
 # Alignment to build the tree from (core gene alignment, FASTA).
-input_file: "data/test/genomics/04_pangenome/307627_ncbi_genomes/panaroo_original.core_90/core_gene_alignment_filtered.aln"
+input_file: "data/test/genomics/04_pangenome/307627_ncbi_genomes/core_0.9/core_gene_alignment_filtered.aln"
 # A filename prefix beneath out_dir/iqtree.
-out_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes/panaroo_original.core_90"
+out_dir: "tests_runs/modules/iqtree"
 prefix: "panaroo_original.core_90.gene_alignment_filtered"
 threads: 8
 # Substitution model; "TEST" runs ModelFinder first and uses the best model (reported in {prefix}.iqtree)
