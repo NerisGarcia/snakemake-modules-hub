@@ -1,7 +1,9 @@
-name: checkm2
+name: checkm2_env
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
   - checkm2=1.1.0
+  - diamond=2.1.11
+  - python=3.12.14
