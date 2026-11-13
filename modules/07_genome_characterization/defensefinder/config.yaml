@@ -1,0 +1,12 @@
+dataset_name: my_dataset
+# File with one sample name per line
+sample_file: data/test/sample.list
+# Protein FASTA of each sample (e.g. Bakta .faa): input_dir/{sample}{input_extension}
+input_dir: data/test/annotation
+input_extension: ".faa"
+out_dir: data/test/results/07_genome_characterization
+# Directory with DefenseFinder models (defense-finder update --models-dir); null = tool default
+db_dir: null
+defensefinder:
+  extra_args: ""
+threads: 4

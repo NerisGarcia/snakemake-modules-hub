@@ -1,0 +1,52 @@
+sample_file = config["sample_file"]
+input_dir = config["input_dir"]
+input_extension = config["input_extension"]
+genomad_dir = f'{config["out_dir"]}/genomad'
+genomad_db = config["db_dir"]
+genomad_config = config.get("genomad") or {}
+splits = genomad_config.get("splits", 16)
+extra_args = genomad_config.get("extra_args", "")
+
+
+def genomad_targets(wildcards):
+    with open(sample_file) as handle:
+        samples = [
+            line.strip()
+            for line in handle
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+    if not samples:
+        raise ValueError(f"sample_file is empty: {sample_file}")
+    if len(samples) != len(set(samples)):
+        raise ValueError(f"sample_file contains duplicate identifiers: {sample_file}")
+    return expand(f"{genomad_dir}/{{sample}}_genomad/{{sample}}_summary.log", sample=samples)
+
+
+rule all:
+    input:
+        genomad_targets
+
+
+# The assembly is linked as {sample}.fasta so output names do not depend on input_extension
+rule genomad:
+    input:
+        contigs=f"{input_dir}/{{sample}}{input_extension}"
+    output:
+        f"{genomad_dir}/{{sample}}_genomad/{{sample}}_summary.log"
+    params:
+        out_dir=f"{genomad_dir}/{{sample}}_genomad",
+        db=genomad_db,
+        splits=splits,
+        extra_args=extra_args
+    threads: config["threads"]
+    conda:
+        "genomad.yaml"
+    shell:
+        r"""
+        mkdir -p {params.out_dir}
+        link={params.out_dir}/{wildcards.sample}.fasta
+        ln -sfn "$(realpath {input.contigs})" "$link"
+        genomad end-to-end --cleanup --splits {params.splits} --threads {threads} \
+            {params.extra_args} "$link" {params.out_dir} {params.db}
+        rm -f "$link"
+        """

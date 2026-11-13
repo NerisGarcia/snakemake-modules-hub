@@ -1,5 +1,7 @@
+import csv
 import hashlib
 import os
+from collections import Counter
 
 
 def read_unique_sample_list(path, label):
@@ -16,20 +18,15 @@ def read_unique_sample_list(path, label):
     return samples
 
 
-sample_file = config["sample_file"]
 subcore_config = config.get("subcore") or {}
 subsample_config = config.get("subsample") or {}
 core_list = subcore_config.get("core_sample_list") or None
 analysis_list = subsample_config.get("analysis_sample_list") or None
-# Lists that do not apply fall back to the full dataset
-core_sample_file = core_list or sample_file
-analysis_sample_file = analysis_list or sample_file
 dataset_name = config["dataset_name"]
-pangenome_dir = config["pangenome_dir"]
 core_threshold = subcore_config["core_threshold"]
-# Folder of the original Panaroo run, e.g. panaroo_original.core_90
-panaroo_run_name = config["panaroo"]["run_name"]
-panaroo_dir = f"{pangenome_dir}/{panaroo_run_name}"
+panaroo_rtab = config["panaroo"]["rtab"]
+panaroo_roary = config["panaroo"]["roary"]
+panaroo_gene_sequences = config["panaroo"]["gene_sequences"]
 
 # Run name encodes which lists were given (false/empty = not applied):
 #   core list only -> subcore, analysis list only -> subsamp, both -> subcore_subsamp
@@ -59,10 +56,21 @@ run_dir = f"{config['out_dir']}/core_subset/{run_name}"
 summary_alignment = f"{config['out_dir']}/gene_aln_cleaning/{run_name}/{run_name}.gene_alignment.aln"
 summary_file = f"{run_dir}/{run_name}.pangenome_summary.tsv"
 
-samples = read_unique_sample_list(sample_file, "sample_list")
-core_samples = read_unique_sample_list(core_sample_file, "core_sample_list")
-analysis_samples = read_unique_sample_list(analysis_sample_file, "analysis_sample_list")
+for path in (panaroo_rtab, panaroo_roary):
+    if not os.path.isfile(path) or os.path.getsize(path) == 0:
+        raise ValueError(f"Missing or empty Panaroo file: {path}")
+if not os.path.isdir(panaroo_gene_sequences):
+    raise ValueError(f"Missing Panaroo gene alignment directory: {panaroo_gene_sequences}")
 
+with open(panaroo_rtab, newline="") as handle:
+    rtab_header = next(csv.reader(handle, delimiter="\t"), [])
+if len(rtab_header) < 2:
+    raise ValueError(f"Panaroo Rtab has no sample columns: {panaroo_rtab}")
+samples = rtab_header[1:]
+if any(not sample for sample in samples) or len(samples) != len(set(samples)):
+    raise ValueError(f"Panaroo Rtab has empty or duplicate sample columns: {panaroo_rtab}")
+core_samples = read_unique_sample_list(core_list, "core_sample_list") if core_list else samples
+analysis_samples = read_unique_sample_list(analysis_list, "analysis_sample_list") if analysis_list else samples
 for label, selected in (
     ("core_sample_list", core_samples),
     ("analysis_sample_list", analysis_samples),
@@ -70,8 +78,20 @@ for label, selected in (
     outside_dataset = sorted(set(selected) - set(samples))
     if outside_dataset:
         raise ValueError(
-            f"{label} contains samples not in sample_list: " + ", ".join(outside_dataset)
+            f"{label} contains samples not in the Panaroo Rtab: " + ", ".join(outside_dataset)
         )
+
+with open(panaroo_roary, newline="") as handle:
+    roary_header = next(csv.reader(handle), [])
+if "Gene" not in roary_header:
+    raise ValueError(f"Panaroo Roary CSV has no Gene column: {panaroo_roary}")
+roary_counts = Counter(roary_header)
+invalid_roary_samples = sorted(sample for sample in samples if roary_counts[sample] != 1)
+if invalid_roary_samples:
+    raise ValueError(
+        "Panaroo Roary CSV must contain exactly one column for each sample: "
+        + ", ".join(invalid_roary_samples)
+    )
 
 def file_md5(path):
     with open(path, "rb") as handle:
@@ -84,18 +104,20 @@ params_text = "\n".join(
     [
         f"run_name: {run_name}",
         f"dataset_name: {dataset_name}",
-        f"panaroo_run: {panaroo_run_name}",
-        f"subcore_label: {subcore_label or 'NA'}",
+        f"panaroo_rtab: {panaroo_rtab}",
+        f"panaroo_roary: {panaroo_roary}",
+        f"panaroo_gene_sequences: {panaroo_gene_sequences}",
+        "subcore_label: {}".format(subcore_label or "NA"),
         f"subcore_core_threshold: {core_threshold}",
-        f"core_sample_list: {core_list or 'NA'}",
-        f"core_sample_list_md5: {file_md5(core_list) if core_list else 'NA'}",
+        "core_sample_list: {}".format(core_list or "NA"),
+        "core_sample_list_md5: {}".format(file_md5(core_list) if core_list else "NA"),
         f"core_samples: {len(core_samples)}",
-        f"subsample_label: {subsample_label or 'NA'}",
-        f"analysis_sample_list: {analysis_list or 'NA'}",
-        f"analysis_sample_list_md5: {file_md5(analysis_list) if analysis_list else 'NA'}",
+        "subsample_label: {}".format(subsample_label or "NA"),
+        "analysis_sample_list: {}".format(analysis_list or "NA"),
+        "analysis_sample_list_md5: {}".format(file_md5(analysis_list) if analysis_list else "NA"),
         f"analysis_samples: {len(analysis_samples)}",
-        f"sample_list: {sample_file}",
-        f"sample_list_md5: {file_md5(sample_file)}",
+        f"panaroo_samples: {len(samples)}",
+        "panaroo_samples_md5: {}".format(hashlib.md5(("\n".join(samples) + "\n").encode()).hexdigest()),
         "",
     ]
 )
@@ -107,14 +129,6 @@ if os.path.exists(params_file):
                 "Use a new label or threshold, or delete that folder to rebuild it."
             )
 
-panaroo_rtab = f"{panaroo_dir}/gene_presence_absence.Rtab"
-panaroo_roary = f"{panaroo_dir}/gene_presence_absence_roary.csv"
-panaroo_combined_cds = f"{panaroo_dir}/combined_DNA_CDS.fasta"
-panaroo_core_alignment = f"{panaroo_dir}/core_gene_alignment.aln"
-panaroo_filtered_alignment = f"{panaroo_dir}/core_gene_alignment_filtered.aln"
-panaroo_gene_sequences = f"{panaroo_dir}/aligned_gene_sequences"
-
-validation_marker = f"{run_dir}/.panaroo_results_validated"
 filtered_roary = f"{run_dir}/gene_presence_absence.selected_samples.csv"
 core_groups = f"{run_dir}/selected_core_groups.tsv"
 sample_log = f"{run_dir}/sample_selection.tsv"
@@ -144,39 +158,12 @@ rule write_run_params:
             handle.write(params_text)
 
 
-rule validate_existing_panaroo:
-    input:
-        rtab=panaroo_rtab,
-        roary=panaroo_roary,
-        combined_cds=panaroo_combined_cds,
-        core_alignment=panaroo_core_alignment,
-        filtered_alignment=panaroo_filtered_alignment,
-        gene_sequences=panaroo_gene_sequences
-    output:
-        validation_marker
-    params:
-        panaroo_dir=panaroo_dir
-    log:
-        f"{log_dir}/validate_existing_panaroo.log"
-    shell:
-        r"""
-        mkdir -p "$(dirname "{log}")"
-        for f in {input.rtab} {input.roary} {input.combined_cds} {input.core_alignment} {input.filtered_alignment}; do
-            test -s "$f" || {{ echo "Missing or empty Panaroo result: $f" >&2; exit 1; }}
-        done 2> {log}
-        test -d "{input.gene_sequences}" || {{ echo "Missing Panaroo directory: {input.gene_sequences}" >&2; exit 1; }}
-        printf 'Validated source Panaroo directory: %s\n' "{params.panaroo_dir}" > "{output}"
-        """
-
-
 rule select_custom_core_groups:
     input:
-        validation=validation_marker,
         roary=panaroo_roary,
         gene_sequence_dir=panaroo_gene_sequences,
-        core_samples=core_sample_file,
-        analysis_samples=analysis_sample_file,
-        all_samples=sample_file
+        rtab=panaroo_rtab,
+        sample_lists=[path for path in (core_list, analysis_list) if path]
     output:
         filtered_roary=filtered_roary,
         core_groups=core_groups,
@@ -184,7 +171,10 @@ rule select_custom_core_groups:
         gene_fastas=directory(gene_fastas)
     params:
         core_threshold=core_threshold,
-        file_prefix=run_name
+        file_prefix=run_name,
+        core_samples=core_samples,
+        analysis_samples=analysis_samples,
+        all_samples=samples
     log:
         f"{log_dir}/select_custom_core_groups.log"
     script:

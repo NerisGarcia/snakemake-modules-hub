@@ -1,0 +1,6 @@
+name: amas_summary
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - amas

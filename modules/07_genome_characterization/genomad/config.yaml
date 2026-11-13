@@ -1,0 +1,13 @@
+dataset_name: my_dataset
+# File with one sample name per line
+sample_file: data/test/sample.list
+# Assembled contigs: input_dir/{sample}{input_extension}
+input_dir: data/test/assembly
+input_extension: ".contigs.fa"
+out_dir: data/test/results/07_genome_characterization
+# geNomad database directory (genomad download-database)
+db_dir: data/test/databases/genomad_db
+genomad:
+  splits: 16
+  extra_args: ""
+threads: 8

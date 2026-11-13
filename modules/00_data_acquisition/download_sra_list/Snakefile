@@ -8,6 +8,10 @@ PREFETCHED_ACCESSIONS_FILE = f"{DATASET_DIR}/prefetched_accessions.txt"
 
 NREAD= config.get("n_reads")
 
+# prefetch breaks when run in parallel: only one job may hold this resource,
+# while the other rules still run in parallel up to --cores
+workflow.global_resources.setdefault("prefetch_slot", 1)
+
 def get_accessions(_wildcards):
     with open(ACCESSIONS_FILE) as handle:
         return [line.strip() for line in handle if line.strip()]
@@ -42,6 +46,9 @@ rule prefetch_sra:
         donefile = DONEFILE
     conda:
         "download_sra.yaml"
+    threads: 1
+    resources:
+        prefetch_slot=1
     shell:
         """
         mkdir -p {params.fastq_dir}

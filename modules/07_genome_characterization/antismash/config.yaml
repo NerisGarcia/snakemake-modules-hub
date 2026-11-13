@@ -1,0 +1,14 @@
+dataset_name: my_dataset
+# File with one sample name per line
+sample_file: data/test/sample.list
+# Assembly FASTA (or annotated GenBank, see Notes): input_dir/{sample}{input_extension}
+input_dir: data/test/assembly
+input_extension: ".fna"
+out_dir: data/test/results/07_genome_characterization
+# antiSMASH databases (download-antismash-databases); null = the databases installed with the env
+db_dir: null
+antismash:
+  taxon: bacteria          # bacteria or fungi
+  genefinding_tool: prodigal   # use none with GenBank input
+  extra_args: ""
+threads: 8

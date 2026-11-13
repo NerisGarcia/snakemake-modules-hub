@@ -4,21 +4,6 @@ import shutil
 from collections import Counter
 
 
-def read_samples(path):
-    """Read unique sample IDs, allowing blank lines and # comments."""
-    with open(path) as handle:
-        samples = [
-            line.strip()
-            for line in handle
-            if line.strip() and not line.lstrip().startswith("#")
-        ]
-    if not samples:
-        raise ValueError(f"Sample list is empty: {path}")
-    if len(samples) != len(set(samples)):
-        raise ValueError(f"Sample list contains duplicate names: {path}")
-    return samples
-
-
 def read_fasta(path):
     """Load a FASTA into {first header token: sequence} records."""
     records = {}
@@ -53,9 +38,9 @@ def write_fasta(path, records):
 # These three lists have different jobs: core_samples define gene prevalence,
 # analysis_samples define retained sample columns/sequences, and all_samples
 # identify which Roary columns are samples rather than metadata.
-core_samples = read_samples(snakemake.input.core_samples)
-analysis_samples = read_samples(snakemake.input.analysis_samples)
-all_samples = read_samples(snakemake.input.all_samples)
+core_samples = snakemake.params.core_samples
+analysis_samples = snakemake.params.analysis_samples
+all_samples = snakemake.params.all_samples
 all_sample_set = set(all_samples)
 
 # The threshold is a fraction, e.g. 0.9 means present in at least 90% of the
@@ -83,7 +68,7 @@ duplicate_sample_columns = sorted(
 )
 if duplicate_sample_columns:
     raise ValueError(
-        "Roary has repeated sample columns; check sample_list for duplicate IDs: "
+        "Roary has repeated sample columns: "
         + ", ".join(duplicate_sample_columns)
     )
 
@@ -107,7 +92,7 @@ if missing_roary_columns:
 outside_dataset = sorted(set(core_samples + analysis_samples) - all_sample_set)
 if outside_dataset:
     raise ValueError(
-        "Core/analysis samples are not in sample_list: " + ", ".join(outside_dataset)
+        "Core/analysis samples are not in the Panaroo Rtab: " + ", ".join(outside_dataset)
     )
 
     # The source directory contains one FASTA per family, named exactly after the

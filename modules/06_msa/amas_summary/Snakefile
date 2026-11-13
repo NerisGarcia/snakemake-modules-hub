@@ -1,0 +1,42 @@
+sample_file = config["sample_file"]
+input_dir = config["input_dir"]
+input_extension = config["input_extension"]
+results_dir = f'{config["out_dir"]}/amas_summary'
+summary_file = f"{results_dir}/amas_alignment_summary.tsv"
+log_dir = f"{results_dir}/logs"
+
+
+def alignment_targets(wildcards):
+    with open(sample_file) as handle:
+        samples = [
+            line.strip()
+            for line in handle
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+    if not samples or len(samples) != len(set(samples)):
+        raise ValueError(f"sample_file must contain unique alignment names: {sample_file}")
+    return expand(f"{input_dir}/{{sample}}{input_extension}", sample=samples)
+
+
+rule all:
+    input:
+        summary_file
+
+
+rule amas_summary:
+    input:
+        alignments=alignment_targets
+    output:
+        summary=summary_file
+    params:
+        out_dir=results_dir
+    log:
+        f"{log_dir}/amas_summary.log"
+    conda:
+        "amas.yaml"
+    threads: 1
+    shell:
+        r"""
+        mkdir -p {params.out_dir:q} "$(dirname {log:q})"
+        AMAS.py summary -i {input.alignments:q} -f fasta -d dna -o {output.summary:q} > {log:q} 2>&1
+        """

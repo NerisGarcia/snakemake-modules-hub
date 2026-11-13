@@ -1,0 +1,13 @@
+dataset_name: my_dataset
+# File with one sample name per line
+sample_file: data/test/sample.list
+# Assembled contigs (nucleotide FASTA): input_dir/{sample}{input_extension}
+input_dir: data/test/assembly
+input_extension: ".fna"
+out_dir: data/test/results/07_genome_characterization
+# AMRFinderPlus database directory; null = the database installed with the conda env
+db_dir: null
+amrfinderplus:
+  organism: null   # e.g. Escherichia; null = no organism-specific point mutations
+  extra_args: ""
+threads: 4

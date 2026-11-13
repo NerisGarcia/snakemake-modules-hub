@@ -27,7 +27,7 @@ rule prepare_tree:
         dist=f"{prefix}.fasta.DM",
         snp_fasta=f"{prefix}.SNPs.fasta",
         fconst_file=f"{prefix}.fconst.txt"
-    threads: config["threads"]
+    threads: config.get("prepare_threads", config["threads"])
     log:
         f"{log_dir}/prepare_tree.log"
     params:

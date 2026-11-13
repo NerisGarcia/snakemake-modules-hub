@@ -11,7 +11,7 @@ Builds a maximum-likelihood tree from a core gene alignment: extracts SNP sites 
 - `{prefix}_logs/`
 
 ## Config
-See [config.yaml](config.yaml): `input_file`, `out_dir`, `prefix` (a filename, not a path), `model` (a fixed model such as `GTR+I+G`, or `TEST` to run ModelFinder and use the best model; the chosen model is in `{prefix}.iqtree`), `bootstrap` (ultrafast bootstrap replicates; 0 = none), `fast` (true adds IQ-TREE `--fast` and skips bootstrap, because IQ-TREE cannot combine them), `threads`. Instantiate the module several times with different `input_file`/`prefix` to build several trees.
+See [config.yaml](config.yaml): `input_file`, `out_dir`, `prefix` (a filename, not a path), `model` (a fixed model such as `GTR+I+G`, or `TEST` to run ModelFinder and use the best model; the chosen model is in `{prefix}.iqtree`), `bootstrap` (ultrafast bootstrap replicates; 0 = none), `fast` (true adds IQ-TREE `--fast` and skips bootstrap, because IQ-TREE cannot combine them), `threads` (optional `prepare_threads` sets the threads of the snp-sites/snp-dists step; defaults to `threads`). Instantiate the module several times with different `input_file`/`prefix` to build several trees.
 
 ## Environment / databases
 - Conda env: `environment.yaml`; no databases.

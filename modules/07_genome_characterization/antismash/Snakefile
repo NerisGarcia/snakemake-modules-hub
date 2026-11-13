@@ -1,0 +1,54 @@
+sample_file = config["sample_file"]
+input_dir = config["input_dir"]
+input_extension = config["input_extension"]
+antismash_dir = f'{config["out_dir"]}/antismash'
+db_dir = config.get("db_dir")
+antismash_config = config.get("antismash") or {}
+taxon = antismash_config.get("taxon", "bacteria")
+extra_args = antismash_config.get("extra_args", "")
+
+
+def antismash_targets(wildcards):
+    with open(sample_file) as handle:
+        samples = [
+            line.strip()
+            for line in handle
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+    if not samples:
+        raise ValueError(f"sample_file is empty: {sample_file}")
+    if len(samples) != len(set(samples)):
+        raise ValueError(f"sample_file contains duplicate identifiers: {sample_file}")
+    return expand(f"{antismash_dir}/{{sample}}_antismash/{{sample}}.json", sample=samples)
+
+
+rule all:
+    input:
+        antismash_targets
+
+
+# Genes are predicted by antiSMASH (prodigal) when the input is a plain FASTA;
+# GenBank input keeps its annotation (use input_extension ".gbff" and set genefinding_tool to none)
+rule antismash:
+    input:
+        genome=f"{input_dir}/{{sample}}{input_extension}"
+    output:
+        f"{antismash_dir}/{{sample}}_antismash/{{sample}}.json"
+    params:
+        out_dir=f"{antismash_dir}/{{sample}}_antismash",
+        taxon=taxon,
+        genefinding=antismash_config.get("genefinding_tool", "prodigal"),
+        db=f"--databases {db_dir}" if db_dir else "",
+        extra_args=extra_args
+    threads: config["threads"]
+    log:
+        f"{antismash_dir}/logs/{{sample}}.log"
+    conda:
+        "antismash.yaml"
+    shell:
+        r"""
+        mkdir -p $(dirname {log})
+        antismash --taxon {params.taxon} --genefinding-tool {params.genefinding} \
+            --cpus {threads} --output-dir {params.out_dir} --output-basename {wildcards.sample} \
+            {params.db} {params.extra_args} {input.genome} > {log} 2>&1
+        """

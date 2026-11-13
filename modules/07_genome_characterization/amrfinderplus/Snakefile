@@ -1,0 +1,50 @@
+sample_file = config["sample_file"]
+input_dir = config["input_dir"]
+input_extension = config["input_extension"]
+amr_dir = f'{config["out_dir"]}/amrfinderplus'
+db_dir = config.get("db_dir")
+amr_config = config.get("amrfinderplus") or {}
+organism = amr_config.get("organism")
+extra_args = amr_config.get("extra_args", "")
+
+
+def amrfinderplus_targets(wildcards):
+    with open(sample_file) as handle:
+        samples = [
+            line.strip()
+            for line in handle
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+    if not samples:
+        raise ValueError(f"sample_file is empty: {sample_file}")
+    if len(samples) != len(set(samples)):
+        raise ValueError(f"sample_file contains duplicate identifiers: {sample_file}")
+    return expand(f"{amr_dir}/{{sample}}.amrfinderplus.tsv", sample=samples)
+
+
+rule all:
+    input:
+        amrfinderplus_targets
+
+
+rule amrfinderplus:
+    input:
+        assembly=f"{input_dir}/{{sample}}{input_extension}"
+    output:
+        f"{amr_dir}/{{sample}}.amrfinderplus.tsv"
+    params:
+        db=f"--database {db_dir}" if db_dir else "",
+        organism=f"--organism {organism}" if organism else "",
+        extra_args=extra_args
+    threads: config["threads"]
+    log:
+        f"{amr_dir}/logs/{{sample}}.log"
+    conda:
+        "amrfinderplus.yaml"
+    shell:
+        r"""
+        mkdir -p $(dirname {output}) $(dirname {log})
+        amrfinder --nucleotide {input.assembly} --name {wildcards.sample} \
+            --threads {threads} {params.db} {params.organism} {params.extra_args} \
+            --output {output} > {log} 2>&1
+        """

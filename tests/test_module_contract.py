@@ -1,6 +1,7 @@
 """Regression tests for module input/output contracts using lightweight fixtures."""
 
 import gzip
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -47,6 +48,18 @@ class ModuleContractTests(unittest.TestCase):
             check=True,
         )
 
+    def panaroo_inputs(self):
+        source = self.root / "previous"
+        source.mkdir()
+        rtab = source / "presence.tsv"
+        rtab.write_text("Gene\talpha\tbeta\nfamily1\t1\t1\n")
+        roary = source / "genes.csv"
+        roary.write_text("Gene,Non-unique Gene name,alpha,beta\nfamily1,,a,b\n")
+        alignments = source / "families"
+        alignments.mkdir()
+        (alignments / "family1.aln.fas").write_text(">alpha;1\nACGT\n>beta;2\nACGA\n")
+        return {"rtab": str(rtab), "roary": str(roary), "gene_sequences": str(alignments)}
+
     def test_quast_targets_each_sample_with_compound_extension(self):
         for sample in ("alpha", "beta"):
             (self.raw / f"{sample}.contigs.fa").write_text(">contig\nACGT\n")
@@ -66,6 +79,25 @@ class ModuleContractTests(unittest.TestCase):
         for sample in ("alpha", "beta"):
             self.assertIn(f"{sample}.contigs.fa", output)
             self.assertIn(f"QUAST/{sample}.quast.transposed_report.tsv", output)
+
+    def test_amas_summary_uses_sample_file_alignments(self):
+        for sample in ("alpha", "beta"):
+            (self.raw / f"{sample}.fasta").write_text(f">{sample}\nACGT\n")
+        result = self.run_snakemake(
+            "modules/06_msa/amas_summary/Snakefile",
+            {
+                "sample_file": str(self.samples),
+                "input_dir": str(self.raw),
+                "input_extension": ".fasta",
+                "out_dir": str(self.root / "results"),
+            },
+            "--dry-run",
+            "--printshellcmds",
+        )
+        output = result.stdout + result.stderr
+        self.assertIn("alpha.fasta", output)
+        self.assertIn("beta.fasta", output)
+        self.assertIn("amas_alignment_summary.tsv", output)
 
     def test_fastp_combines_unpaired_reads_and_generates_reports(self):
         for sample in ("alpha", "beta"):
@@ -255,6 +287,119 @@ class ModuleContractTests(unittest.TestCase):
         with self.assertRaises(subprocess.CalledProcessError) as error:
             self.run_snakemake("modules/02_assembly/quast/Snakefile", config, "--dry-run")
         self.assertIn("duplicate identifiers", error.exception.stdout + error.exception.stderr)
+
+    def test_core_subset_writes_parameters_for_optional_sample_lists(self):
+        subset = self.root / "subset.txt"
+        subset.write_text("alpha\n")
+        panaroo = self.panaroo_inputs()
+        for use_core, use_analysis in ((True, False), (False, True), (True, True)):
+            with self.subTest(use_core=use_core, use_analysis=use_analysis):
+                subcore = {"core_threshold": 0.8}
+                subsample = {}
+                if use_core:
+                    subcore.update(core_sample_list=str(subset), label="core")
+                if use_analysis:
+                    subsample.update(analysis_sample_list=str(subset), label="analysis")
+                prefix = "_".join(
+                    part for part, enabled in (("subcore", use_core), ("subsamp", use_analysis))
+                    if enabled
+                )
+                label = "__".join(
+                    part for part, enabled in (("core", use_core), ("analysis", use_analysis))
+                    if enabled
+                )
+                run_name = f"{prefix}.{label}.core_80"
+                output = self.root / "results" / "core_subset" / run_name / "params.txt"
+                config = {
+                    "dataset_name": "example",
+                    "out_dir": str(self.root / "results"),
+                    "panaroo": panaroo,
+                    "subcore": subcore,
+                    "subsample": subsample,
+                }
+                self.run_snakemake("modules/04_pangenome/core_subset/Snakefile", config, str(output))
+                params = dict(line.split(": ", 1) for line in output.read_text().splitlines())
+                checksum = hashlib.md5(subset.read_bytes()).hexdigest()
+                for name, enabled, expected_label in (
+                    ("core", use_core, "core"),
+                    ("analysis", use_analysis, "analysis"),
+                ):
+                    label_key = "subcore_label" if name == "core" else "subsample_label"
+                    self.assertEqual(params[label_key], expected_label if enabled else "NA")
+                    self.assertEqual(params[f"{name}_sample_list"], str(subset) if enabled else "NA")
+                    self.assertEqual(params[f"{name}_sample_list_md5"], checksum if enabled else "NA")
+                    self.assertEqual(params[f"{name}_samples"], "1" if enabled else "2")
+                self.assertEqual(params["panaroo_samples"], "2")
+                self.assertEqual(params["panaroo_samples_md5"], hashlib.md5(b"alpha\nbeta\n").hexdigest())
+                sample_output = output.parent / "analysis_samples.txt"
+                self.run_snakemake("modules/04_pangenome/core_subset/Snakefile", config, str(sample_output))
+                expected_analysis = "alpha\n" if use_analysis else "alpha\nbeta\n"
+                expected_core = ["alpha"] if use_core else ["alpha", "beta"]
+                self.assertEqual(sample_output.read_text(), expected_analysis)
+                selections = (output.parent / "sample_selection.tsv").read_text().splitlines()
+                core_selections = [
+                    line.split("\t", 1)[1] for line in selections
+                    if line.startswith("core_definition\t")
+                ]
+                self.assertEqual(core_selections, expected_core)
+
+    def test_editcore_uses_existing_panaroo_inputs_and_checks_samples(self):
+        panaroo = self.panaroo_inputs()
+        core = self.root / "core.txt"
+        core.write_text("alpha\n")
+        analysis = self.root / "analysis.txt"
+        analysis.write_text("beta\n")
+        results = self.root / "results"
+        config = {
+            "dataset_name": "example",
+            "out_dir": str(results),
+            "panaroo": panaroo,
+            "subcore": {"core_sample_list": str(core), "core_threshold": 0.8, "label": "core"},
+            "subsample": {"analysis_sample_list": str(analysis), "label": "analysis"},
+            "threads": {"mafft": 1, "snp_dists": 1, "iqtree": 1},
+            "gene_aln_cleaning": {},
+            "iqtree": {"model": "GTR", "fast": True},
+        }
+        snakefile = "workflows/02_panaroo_then_editcore/Snakefile"
+        run_dir = results / "core_subset/subcore_subsamp.core__analysis.core_80"
+        groups = run_dir / "selected_core_groups.tsv"
+        self.run_snakemake(snakefile, config, str(groups))
+        self.assertIn("family1", groups.read_text())
+        self.assertEqual(
+            (run_dir / "selected_gene_fastas/subcore_subsamp.core__analysis.core_80_family1.fasta").read_text(),
+            ">beta\nACGA\n",
+        )
+
+        for selected in (core, analysis):
+            with self.subTest(invalid_list=selected.name):
+                original = selected.read_text()
+                selected.write_text("unknown\n")
+                with self.assertRaises(subprocess.CalledProcessError) as error:
+                    self.run_snakemake(snakefile, config, "--dry-run")
+                self.assertIn("not in the Panaroo Rtab", error.exception.stdout + error.exception.stderr)
+                selected.write_text(original)
+
+        roary = Path(panaroo["roary"])
+        roary.write_text("Gene,alpha\nfamily1,a\n")
+        with self.assertRaises(subprocess.CalledProcessError) as error:
+            self.run_snakemake(snakefile, config, "--dry-run")
+        self.assertIn("exactly one column", error.exception.stdout + error.exception.stderr)
+
+        roary.write_text("Gene,alpha,beta\nfamily1,a,b\n")
+        Path(panaroo["rtab"]).write_text("Gene\talpha\nfamily1\t1\n")
+        with self.assertRaises(subprocess.CalledProcessError) as error:
+            self.run_snakemake(snakefile, config, "--dry-run")
+        self.assertIn("not in the Panaroo Rtab", error.exception.stdout + error.exception.stderr)
+
+        Path(panaroo["rtab"]).write_text("Gene\talpha\talpha\nfamily1\t1\t1\n")
+        with self.assertRaises(subprocess.CalledProcessError) as error:
+            self.run_snakemake(snakefile, config, "--dry-run")
+        self.assertIn("duplicate sample columns", error.exception.stdout + error.exception.stderr)
+
+        Path(panaroo["rtab"]).unlink()
+        with self.assertRaises(subprocess.CalledProcessError) as error:
+            self.run_snakemake(snakefile, config, "--dry-run")
+        self.assertIn("Missing or empty Panaroo file", error.exception.stdout + error.exception.stderr)
 
     def test_paired_kraken_and_panaroo_use_input_dir(self):
         for sample in ("alpha", "beta"):

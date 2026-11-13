@@ -1,11 +1,13 @@
 dataset_name: "307627_ncbi_genomes"   # optional label, recorded in params.txt
-sample_list: "data/test/genomics/307627_ncbi_genomes_accessions.txt"   # all samples of the Panaroo run
-threads: 8
 
-# Existing Panaroo run (made by workflows/02_panaroo_tree, alignment "pan"): full path ending at the
-# panaroo_original.core_{pct} folder. Subset runs are created next to it, in the same dataset folder.
+out_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes"
+
+# Files from an existing Panaroo run made with alignment: "pan".
+# This workflow never runs Panaroo.
 panaroo:
-  dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes/panaroo_original.core_90"
+  rtab: "data/test/genomics/04_pangenome/307627_ncbi_genomes/panaroo_original.core_90/gene_presence_absence.Rtab"
+  roary: "data/test/genomics/04_pangenome/307627_ncbi_genomes/panaroo_original.core_90/gene_presence_absence_roary.csv"
+  gene_sequences: "data/test/genomics/04_pangenome/307627_ncbi_genomes/panaroo_original.core_90/aligned_gene_sequences"
 
 # At least one of the two lists is required.
 # Folder name = {kind}.{label}.core_{pct}, pct = subcore.core_threshold x 100:
@@ -34,3 +36,11 @@ iqtree:
   model: "GTR+I+G"   # or "TEST" to pick the best model with ModelFinder
   bootstrap: 1000    # ignored while fast is true (IQ-TREE cannot combine them)
   fast: true
+
+
+
+# Threads per program
+threads:
+  mafft: 8       # per-gene realignment (one job per gene; Snakemake --cores caps the total)
+  snp_dists: 4   # snp-sites / snp-dists before the tree
+  iqtree: 8
