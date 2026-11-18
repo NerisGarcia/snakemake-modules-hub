@@ -1,4 +1,5 @@
 import shutil
+import sys
 import xml.etree.ElementTree as ET
 
 xml_files = snakemake.input
@@ -18,9 +19,17 @@ records = []
 attribute_names = []
 seen_attrs = set()
 
+skipped = []
+
 for xml_file in xml_files:
-    biosample = ET.parse(xml_file).find(".//BioSample")
+    try:
+        biosample = ET.parse(xml_file).find(".//BioSample")
+    except ET.ParseError:
+        # Empty/truncated download (e.g. NCBI rate limiting)
+        skipped.append(xml_file)
+        continue
     if biosample is None:
+        skipped.append(xml_file)
         continue
 
     record = {
@@ -60,4 +69,13 @@ with open(output_file, "w") as out:
     for record in records:
         out.write("\t".join(record.get(col, "") for col in header) + "\n")
 
-shutil.rmtree(tmp_dir)
+if skipped:
+    print(
+        f"WARNING: skipped {len(skipped)} empty/invalid XML file(s); "
+        f"temp dir kept for re-fetching: {tmp_dir}",
+        file=sys.stderr,
+    )
+    for xml_file in skipped:
+        print(f"  {xml_file}", file=sys.stderr)
+else:
+    shutil.rmtree(tmp_dir)
