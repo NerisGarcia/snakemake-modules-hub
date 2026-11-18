@@ -6,6 +6,9 @@ input_dir: data/test/assembly
 input_extension: ".fna"
 out_dir: data/test/results/07_genome_characterization
 # AMRFinderPlus database directory; null = the database installed with the conda env
+# To use a custom database:
+#   1. Download/update with: amrfinder --update --database /path/to/db
+#   2. Set db_dir to that path
 db_dir: null
 amrfinderplus:
   organism: null   # e.g. Escherichia; null = no organism-specific point mutations

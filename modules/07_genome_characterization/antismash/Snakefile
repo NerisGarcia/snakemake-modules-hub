@@ -48,7 +48,7 @@ rule antismash:
     shell:
         r"""
         mkdir -p $(dirname {log})
-        antismash --taxon {params.taxon} --genefinding-tool {params.genefinding} \
+        antismash --minimal --taxon {params.taxon} --genefinding-tool {params.genefinding} \
             --cpus {threads} --output-dir {params.out_dir} --output-basename {wildcards.sample} \
             {params.db} {params.extra_args} {input.genome} > {log} 2>&1
         """

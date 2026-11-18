@@ -6,6 +6,9 @@ input_dir: data/test/annotation
 input_extension: ".faa"
 out_dir: data/test/results/07_genome_characterization
 # Directory with DefenseFinder models (defense-finder update --models-dir); null = tool default
+# To use custom models:
+#   1. Download with: defense-finder update --models-dir /path/to/db
+#   2. Set db_dir to that path
 db_dir: null
 defensefinder:
   extra_args: ""

@@ -6,6 +6,9 @@ input_dir: data/test/assembly
 input_extension: ".fna"
 out_dir: data/test/results/07_genome_characterization
 # antiSMASH databases (download-antismash-databases); null = the databases installed with the env
+# To use custom databases:
+#   1. Download with: download-antismash-databases /path/to/db
+#   2. Set db_dir to that path
 db_dir: null
 antismash:
   taxon: bacteria          # bacteria or fungi

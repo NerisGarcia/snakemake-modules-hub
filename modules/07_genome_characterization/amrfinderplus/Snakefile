@@ -48,3 +48,4 @@ rule amrfinderplus:
             --threads {threads} {params.db} {params.organism} {params.extra_args} \
             --output {output} > {log} 2>&1
         """
+
