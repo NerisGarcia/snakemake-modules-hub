@@ -1,5 +1,3 @@
-import os
-
 # Edit-only workflow: it reads an existing Panaroo run (made by 02_panaroo_tree or the panaroo module)
 dataset_name = config.get("dataset_name") or ""
 subcore_config = config.get("subcore") or {}
@@ -11,20 +9,11 @@ def core_tag(value):
     return f"core_{round(float(value) * 100)}"
 
 
-# panaroo.dir is the full path of the original run; subset runs are created next to it
-panaroo_dir = config["panaroo"]["dir"].rstrip("/")
-pangenome_dir = os.path.dirname(panaroo_dir)
-panaroo_run_name = os.path.basename(panaroo_dir)
+out_dir = config["out_dir"]
 core_list = subcore_config.get("core_sample_list") or None
 analysis_list = subsample_config.get("analysis_sample_list") or None
 if not (core_list or analysis_list):
     raise ValueError("Set subcore.core_sample_list and/or subsample.analysis_sample_list")
-for needed in ("gene_presence_absence_roary.csv", "combined_DNA_CDS.fasta", "aligned_gene_sequences"):
-    if not os.path.exists(f"{panaroo_dir}/{needed}"):
-        raise ValueError(
-            f"{panaroo_dir}/{needed} not found: run the Panaroo workflow (02_panaroo_tree) first, "
-            "with alignment 'pan', or fix panaroo.dir"
-        )
 
 # Folder name of the core_subset run, which gene_aln_cleaning writes into too:
 #   core list only -> subcore, analysis list only -> subsamp, both -> subcore_subsamp
@@ -42,17 +31,15 @@ if analysis_list and not subsample_label:
     raise ValueError("Set subsample.label to describe subsample.analysis_sample_list (e.g. 'cladeA1')")
 label = "__".join(part for part in (subcore_label, subsample_label) if part)
 subset_name = f"{subset_prefix}.{label}.{core_tag(subcore_threshold)}"
-subset_dir = f"{pangenome_dir}/core_subset/{subset_name}"
-alignment_dir = f"{pangenome_dir}/gene_aln_cleaning/{subset_name}"
-subset_tree_prefix = f"{pangenome_dir}/iqtree/{subset_name}.gene_alignment"
+subset_dir = f"{out_dir}/core_subset/{subset_name}"
+alignment_dir = f"{out_dir}/gene_aln_cleaning/{subset_name}"
+subset_tree_prefix = f"{out_dir}/iqtree/{subset_name}.gene_alignment"
 
 module_configs = {
     "core_subset": {
         "dataset_name": dataset_name,
-        "sample_file": config["sample_list"],
-        "pangenome_dir": pangenome_dir,
-        "out_dir": pangenome_dir,
-        "panaroo": {"run_name": panaroo_run_name},
+        "out_dir": out_dir,
+        "panaroo": config["panaroo"],
         "subcore": {
             "core_sample_list": core_list,
             "core_threshold": subcore_threshold,
@@ -66,17 +53,18 @@ module_configs = {
     "gene_aln_cleaning": {
         "alignment_list": f"{subset_dir}/selected_alignments.txt",
         "sample_file": f"{subset_dir}/analysis_samples.txt",
-        "out_dir": pangenome_dir,
+        "out_dir": out_dir,
         "prefix": subset_name,
-        "threads": config["threads"],
+        "threads": config["threads"]["mafft"],
         **config["gene_aln_cleaning"],
     },
     "editcore_iqtree": {
         **config["iqtree"],
         "input_file": f"{alignment_dir}/{subset_name}.gene_alignment.aln",
-        "out_dir": pangenome_dir,
+        "out_dir": out_dir,
         "prefix": f"{subset_name}.gene_alignment",
-        "threads": config["threads"],
+        "threads": config["threads"]["iqtree"],
+        "prepare_threads": config["threads"]["snp_dists"],
     },
 }
 

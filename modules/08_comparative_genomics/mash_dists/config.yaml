@@ -1,0 +1,29 @@
+# ---------------------------------------------------------------------------
+# Module config template. Keep these variable names across all modules.
+# Delete sections that do not apply; do not rename the ones you keep.
+# ---------------------------------------------------------------------------
+
+# Name of the dataset (used to name outputs)
+dataset_name: Lcrispatus.v2.qc_passed
+
+# --- Inputs ----------------------------------------------------------------
+# File with one sample name per line
+sample_file: /local/scratch/neris/projects/02_lacto_genomics/data/1_datasets/Lcrispatus.v2.qc_passed.accessions.txt
+
+# Directory with the input files of this module
+input_dir: /local/scratch/neris/projects/02_lacto_genomics/data/0_input_data/02_annotation
+# Suffix appended to each sample name, including its leading dot
+input_extension: ".fna"
+
+
+# --- Outputs ---------------------------------------------------------------
+# Parent directory; modules create a tool-specific results subdirectory
+out_dir: /local/scratch/neris/projects/02_lacto_genomics/data/03_comparative_genomics/Lcrispatus/mash_dist
+
+# --- Tool parameters -------------------------------------------------------
+# Tool-specific options, grouped under the tool name
+tool_name:
+  extra_args: ""
+
+# --- Threads ---------------------------------------------------------------
+threads: 8

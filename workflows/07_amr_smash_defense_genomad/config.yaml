@@ -1,0 +1,42 @@
+dataset_name: my_dataset
+# File with one sample name per line
+sample_file: "data/test/sample.list"
+# Assembly directory and file extension (nucleotide FASTA)
+input_dir: "data/test/assembly"
+input_extension: ".fna"
+# Directory containing annotated genomes and protein predictions (bakta output)
+annotation_dir: "data/test/results/02_annotation/bakta"
+# Results directory where all outputs will be written
+genomics_results_dir: "data/test/results"
+
+# Database directories
+# null = use default installed with conda env
+# or set to path where you've downloaded the databases
+# 
+# To download/update databases:
+#   amrfinder --update --database /path/to/amrfinderplus_db
+#   defense-finder update --models-dir /path/to/defensefinder_db
+#   genomad download-database /path/to/genomad_db
+# 
+# Then set the paths below
+amrfinderplus_db: null
+defensefinder_db: null
+genomad_db: null
+
+# Tool-specific configuration
+amrfinderplus:
+  organism: null          # e.g., "Escherichia" for organism-specific mutations
+  extra_args: ""
+
+defensefinder:
+  extra_args: ""
+
+genomad:
+  splits: 16
+  extra_args: ""
+
+# Number of threads per tool
+threads:
+  amrfinderplus: 4
+  defensefinder: 4
+  genomad: 8

@@ -1,0 +1,76 @@
+SAMPLES = [line.strip() for line in open(config["sample_file"]) if line.strip()]
+SAMPLE_FILE = config["sample_file"]
+INPUT_DIR = config["input_dir"]
+INPUT_EXTENSION = config["input_extension"]
+OUT_DIR = config["out_dir"]
+SKETCH_DIR = f"{OUT_DIR}/sketches"
+
+
+rule all:
+    input:
+        f"{OUT_DIR}/mash_distances.tsv"
+
+rule create_filepath:
+    input:
+        SAMPLE_FILE
+    output:
+        temp(f"{OUT_DIR}/temp_filepath.txt")
+    params:
+        input_dir=INPUT_DIR,
+        ext=INPUT_EXTENSION
+    run:
+        import os
+        
+        filepaths = []
+        missing_samples = []
+        
+        with open(input[0]) as f:
+            for line in f:
+                sample = line.strip()
+                if not sample:
+                    continue
+                    
+                filepath = os.path.join(params.input_dir, f"{sample}{params.ext}")
+                
+                if os.path.exists(filepath):
+                    filepaths.append(filepath)
+                else:
+                    missing_samples.append(sample)
+        
+        if missing_samples:
+            raise FileNotFoundError(
+                f"The following samples are missing their expected files:\n"
+                + "\n".join(f"  {s}: {params.input_dir}/{s}{params.ext}" for s in missing_samples)
+            )
+        
+        with open(output[0], 'w') as out:
+            for filepath in filepaths:
+                out.write(f"{filepath}\n")
+
+
+rule mash_sketch:
+    input:
+        f"{OUT_DIR}/temp_filepath.txt"
+    output:
+        temp(f"{SKETCH_DIR}/genomes.msh")
+    params:
+        genome_dir=INPUT_DIR,
+        ext=INPUT_EXTENSION
+    conda:
+        "cenv.mash.yaml"
+    threads: config["threads"]
+    shell:
+        "mash sketch -l {input} -o {SKETCH_DIR}/genomes -p {threads}"
+
+rule mash_dist:
+    input:
+        f"{SKETCH_DIR}/genomes.msh"
+    output:
+        f"{OUT_DIR}/mash_distances.tsv"
+    threads: config["threads"]
+    conda:
+        "cenv.mash.yaml"
+    shell:
+        """
+        mash dist -p {threads} {input} {input} > {output}
+        """

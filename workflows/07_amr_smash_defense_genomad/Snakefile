@@ -1,0 +1,63 @@
+import os
+
+with open(config["sample_file"]) as handle:
+    samples = [line.strip() for line in handle if line.strip() and not line.lstrip().startswith("#")]
+if not samples or len(samples) != len(set(samples)):
+    raise ValueError("sample_file must contain unique sample IDs")
+
+assemblies = {
+    sample: os.path.join(config["input_dir"], sample + config["input_extension"])
+    for sample in samples
+}
+proteins = {
+    sample: os.path.join(config["annotation_dir"], sample + ".faa")
+    for sample in samples
+}
+
+available_samples = [
+    s for s in samples if os.path.isfile(assemblies[s]) and os.path.getsize(assemblies[s]) > 0
+]
+
+results_dir = config["genomics_results_dir"]
+characterization_dir = f"{results_dir}/07_genome_characterization"
+amr_dir = f"{characterization_dir}/amrfinderplus"
+defensefinder_dir = f"{characterization_dir}/defensefinder"
+genomad_dir = f"{characterization_dir}/genomad"
+
+wildcard_constraints:
+    sample="[^/]+"
+
+module amrfinderplus_module:
+    snakefile: "../../modules/07_genome_characterization/amrfinderplus/Snakefile"
+    config:
+        {"sample_file": config["sample_file"], "input_dir": config["input_dir"],
+         "input_extension": config["input_extension"], "out_dir": characterization_dir,
+         "db_dir": config.get("amrfinderplus_db"), "threads": config["threads"]["amrfinderplus"],
+         "amrfinderplus": config.get("amrfinderplus", {})}
+
+module defensefinder_module:
+    snakefile: "../../modules/07_genome_characterization/defensefinder/Snakefile"
+    config:
+        {"sample_file": config["sample_file"], "input_dir": config["annotation_dir"],
+         "input_extension": ".faa", "out_dir": characterization_dir,
+         "db_dir": config.get("defensefinder_db"), "threads": config["threads"]["defensefinder"],
+         "defensefinder": config.get("defensefinder", {})}
+
+module genomad_module:
+    snakefile: "../../modules/07_genome_characterization/genomad/Snakefile"
+    config:
+        {"sample_file": config["sample_file"], "input_dir": config["input_dir"],
+         "input_extension": config["input_extension"], "out_dir": characterization_dir,
+         "db_dir": config.get("genomad_db"), "threads": config["threads"]["genomad"],
+         "genomad": config.get("genomad", {})}
+
+use rule * from amrfinderplus_module exclude all as amrfinderplus_*
+use rule * from defensefinder_module exclude all as defensefinder_*
+use rule * from genomad_module exclude all as genomad_*
+
+rule all:
+    default_target: True
+    input:
+        expand(f"{amr_dir}/{{sample}}.amrfinderplus.tsv", sample=available_samples),
+        expand(f"{defensefinder_dir}/{{sample}}/{{sample}}_defense_finder_systems.tsv", sample=available_samples),
+        expand(f"{genomad_dir}/{{sample}}_genomad/{{sample}}_summary.log", sample=available_samples)

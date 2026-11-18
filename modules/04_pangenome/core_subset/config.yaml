@@ -1,12 +1,11 @@
 dataset_name: "307627_ncbi_genomes"
-# Full dataset used for the Panaroo run (one isolate ID per line).
-sample_file: "data/test/genomics/307627_ncbi_genomes_accessions.txt"
-# The Panaroo run is read from {pangenome_dir}/{panaroo.run_name}.
-pangenome_dir: "data/test/genomics/04_pangenome/307627_ncbi_genomes"
 out_dir: "tests_runs/modules/core_subset"
 
+# Existing Panaroo results, produced with alignment: "pan".
 panaroo:
-  run_name: "core_0.9"
+  rtab: "data/test/genomics/04_pangenome/307627_ncbi_genomes/core_0.9/gene_presence_absence.Rtab"
+  roary: "data/test/genomics/04_pangenome/307627_ncbi_genomes/core_0.9/gene_presence_absence_roary.csv"
+  gene_sequences: "data/test/genomics/04_pangenome/307627_ncbi_genomes/core_0.9/aligned_gene_sequences"
 
 # Optional lists; use false (or empty) when not applied, but at least one is required.
 # Run name = {kind}.{label}.core_{pct}, pct = subcore.core_threshold x 100:

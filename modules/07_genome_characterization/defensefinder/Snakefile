@@ -1,0 +1,73 @@
+sample_file = config["sample_file"]
+input_dir = config["input_dir"]
+input_extension = config["input_extension"]
+defensefinder_dir = f'{config["out_dir"]}/defensefinder'
+db_dir = config.get("db_dir")
+defensefinder_config = config.get("defensefinder") or {}
+extra_args = defensefinder_config.get("extra_args", "")
+
+
+def defensefinder_targets(wildcards):
+    with open(sample_file) as handle:
+        samples = [
+            line.strip()
+            for line in handle
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+    if not samples:
+        raise ValueError(f"sample_file is empty: {sample_file}")
+    if len(samples) != len(set(samples)):
+        raise ValueError(f"sample_file contains duplicate identifiers: {sample_file}")
+    return expand(f"{defensefinder_dir}/{{sample}}/{{sample}}_defense_finder_systems.tsv", sample=samples)
+
+
+rule all:
+    input:
+        defensefinder_targets,
+        f"{defensefinder_dir}/defensefinder_db_updated" if db_dir else []
+
+
+rule defensefinder_db:
+    output:
+        flag=f"{defensefinder_dir}/defensefinder_db_updated"
+    params:
+        db=db_dir
+    conda:
+        "defensefinder.yaml"
+    log:
+        f"{defensefinder_dir}/logs/defensefinder_db_update.log"
+    shell:
+        r"""
+        mkdir -p {params.db} $(dirname {log})
+        defense-finder update --models-dir {params.db} > {log} 2>&1
+        touch {output.flag}
+        """
+
+
+rule defensefinder:
+    input:
+        proteins=f"{input_dir}/{{sample}}{input_extension}",
+        db_flag=f"{defensefinder_dir}/defensefinder_db_updated" if db_dir else []
+    output:
+        systems=f"{defensefinder_dir}/{{sample}}/{{sample}}_defense_finder_systems.tsv",
+        genes=f"{defensefinder_dir}/{{sample}}/{{sample}}_defense_finder_genes.tsv",
+        hmmer=f"{defensefinder_dir}/{{sample}}/{{sample}}_defense_finder_hmmer.tsv"
+    params:
+        out_dir=f"{defensefinder_dir}/{{sample}}",
+        db=f"--models-dir {db_dir}" if db_dir else "",
+        extra_args=extra_args
+    threads: config["threads"]
+    log:
+        f"{defensefinder_dir}/logs/{{sample}}.log"
+    conda:
+        "defensefinder.yaml"
+    shell:
+        r"""
+        mkdir -p {params.out_dir} $(dirname {log})
+        defense-finder run {input.proteins} --out-dir {params.out_dir} \
+            --workers {threads} {params.db} {params.extra_args} > {log} 2>&1
+        # Rename outputs to follow expected naming
+        mv {params.out_dir}/defense_finder_systems.tsv {output.systems} 2>/dev/null || touch {output.systems}
+        mv {params.out_dir}/defense_finder_genes.tsv {output.genes} 2>/dev/null || touch {output.genes}
+        mv {params.out_dir}/defense_finder_hmmer.tsv {output.hmmer} 2>/dev/null || touch {output.hmmer}
+        """

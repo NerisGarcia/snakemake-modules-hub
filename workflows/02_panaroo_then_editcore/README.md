@@ -18,15 +18,22 @@ snakemake --snakefile workflows/02_panaroo_then_editcore/Snakefile \
     --cores 8 --use-conda --conda-frontend conda
 ```
 
-Edit [config.yaml](config.yaml): `panaroo.dir` (full path ending at `panaroo_original.core_{pct}`), the `subcore` / `subsample` lists with their labels, `subcore.core_threshold` and the IQ-TREE options (`iqtree.fast: true` by default, which skips bootstrap; `iqtree.model: "TEST"` runs ModelFinder). The workflow stops with a clear error if the Panaroo files are missing.
+Edit [config.yaml](config.yaml), setting:
+
+- `panaroo.rtab`: the existing `gene_presence_absence.Rtab`, used in the pangenome summary.
+- `panaroo.roary`: the existing `gene_presence_absence_roary.csv`, used to select and filter gene families.
+- `panaroo.gene_sequences`: the existing `aligned_gene_sequences/` directory, created by Panaroo with `alignment: "pan"`.
+- `out_dir`: where to write the new results.
+- The `subcore` / `subsample` lists and their labels, `subcore.core_threshold`, and the IQ-TREE options (`iqtree.fast: true` skips bootstrap; `iqtree.model: "TEST"` runs ModelFinder).
+
+The full sample list and its order come from the Rtab. Each sample must appear exactly once in the Roary CSV, and both selection lists must be subsets of the Rtab samples. Missing inputs or mismatched samples stop the workflow before rules run. The three Panaroo inputs must come from the same run; the original combined CDS and core alignment files are not needed.
 
 ## Outputs
 
-Next to the Panaroo folder, under `<parent of panaroo.dir>/core_subset/<subset name>/`, named `subcore.`, `subsamp.` or `subcore_subsamp.` + `{subcore.label}[__{subsample.label}].core_{pct}` (`pct` = `subcore.core_threshold` × 100; labels are required with their list and describe it, e.g. `isolates_only`, `cladeA1`):
+Under `out_dir/core_subset/<subset name>/`, named `subcore.`, `subsamp.` or `subcore_subsamp.` + `{subcore.label}[__{subsample.label}].core_{pct}` (`pct` = `subcore.core_threshold` × 100; labels are required with their list and describe it, e.g. `isolates_only`, `cladeA1`):
 
 - Custom core group table, sample-selection log, selected gene FASTAs, alignment, AMAS summary, pangenome summary and the IQ-TREE tree.
 - `params.txt` records the settings; re-using a label with different settings stops with an error.
-- Cleaned alignments go under `gene_aln_cleaning/<subset name>/` and the tree
-  under `iqtree/`, both beneath the parent of `panaroo.dir`.
+- Cleaned alignments go under `out_dir/gene_aln_cleaning/<subset name>/` and the tree under `out_dir/iqtree/`.
 
-At least one of `subcore.core_sample_list` and `subsample.analysis_sample_list` is required.
+At least one of `subcore.core_sample_list` and `subsample.analysis_sample_list` is required. An omitted list uses all Panaroo samples in Rtab order. Existing `params.txt` files from the previous configuration format will not match; use a new label or rebuild the derived output folder.

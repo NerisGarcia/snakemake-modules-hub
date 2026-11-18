@@ -4,7 +4,7 @@ clean_dir: "data/clean"
 fastp:
   extra_args: "--detect_adapter_for_pe --trim_poly_g --cut_right --length_required 55 --cut_window_size 4 --cut_mean_quality 12"
 genomics_results_dir: "data/results"
-summary_table: "data/results/03_qc/pipeline_summary.tsv"
+summary_table: "data/results/03_qc/assembly_pipeline_summary.tsv"
 
 kraken_db: "/path/to/kraken2_db"
 bakta_db: "/Users/ngarcia-gonzalez/Desktop/SOFTWARE_NGG/DATABASES/bakta/27apr2026/db-light"

@@ -27,7 +27,7 @@ rule prepare_tree:
         dist=f"{prefix}.fasta.DM",
         snp_fasta=f"{prefix}.SNPs.fasta",
         fconst_file=f"{prefix}.fconst.txt"
-    threads: config["threads"]
+    threads: config.get("prepare_threads", config["threads"])
     log:
         f"{log_dir}/prepare_tree.log"
     params:
@@ -58,7 +58,6 @@ rule iqtree_tree:
         bootstrap=bootstrap_flag,
         fast=fast_flag,
         prefix=prefix
-    threads: config["threads"]
     log:
         f"{log_dir}/iqtree.log"
     conda:
@@ -68,6 +67,6 @@ rule iqtree_tree:
         mkdir -p "$(dirname "{params.prefix}")"
         fconstsvar=$(cat "{input.fconst_file}")
         iqtree -s "{input.snp_fasta}" -m "{params.model}" {params.bootstrap} {params.fast} \
-            -nt {threads} --redo -fconst "$fconstsvar" --prefix "{params.prefix}" > {log} 2>&1
+            -nt AUTO --redo -fconst "$fconstsvar" --prefix "{params.prefix}" > {log} 2>&1
         rm -f "{params.prefix}.ckp.gz"
         """
