@@ -2,8 +2,8 @@
 sample_file = config["sample_file"]
 input_dir = config["input_dir"]
 input_extension = config["input_extension"]
-busco_output = f'{config["out_dir"]}/BUSCO'
 busco_lineage = config["busco_lineage"]
+busco_output = f'{config["out_dir"]}/BUSCO/{busco_lineage}'
 
 def busco_targets(wildcards):
     with open(sample_file) as handle:
